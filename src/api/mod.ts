@@ -10,15 +10,14 @@ import { parseFlags } from "@cliffy/flags";
 export { images, machines, volumes };
 
 export default function () {
-  const token = Deno.env.get("FREEBSD_UP_API_TOKEN") ||
-    crypto.randomUUID();
+  const token = Deno.env.get("VMX_API_TOKEN") || crypto.randomUUID();
   const { flags } = parseFlags(Deno.args);
 
-  if (!Deno.env.get("FREEBSD_UP_API_TOKEN")) {
+  if (!Deno.env.get("VMX_API_TOKEN")) {
     console.log(`Using API token: ${token}`);
   } else {
     console.log(
-      `Using provided API token from environment variable FREEBSD_UP_API_TOKEN`,
+      `Using provided API token from environment variable VMX_API_TOKEN`
     );
   }
 
@@ -36,10 +35,11 @@ export default function () {
   app.route("/volumes", volumes);
 
   const port = Number(
-    flags.port || flags.p ||
-      (Deno.env.get("FREEBSD_UP_PORT")
-        ? Number(Deno.env.get("FREEBSD_UP_PORT"))
-        : 8890),
+    flags.port ||
+      flags.p ||
+      (Deno.env.get("VMX_API_PORT")
+        ? Number(Deno.env.get("VMX_API_PORT"))
+        : 8889)
   );
 
   Deno.serve({ port }, app.fetch);
