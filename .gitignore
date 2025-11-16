@@ -3,3 +3,4 @@
 vmconfig.toml
 .env
 *.fd
+vmlinux

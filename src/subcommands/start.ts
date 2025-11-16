@@ -12,10 +12,11 @@ export class VmNotFoundError extends Data.TaggedError("VmNotFoundError")<{
   name: string;
 }> {}
 
-export class VmAlreadyRunningError
-  extends Data.TaggedError("VmAlreadyRunningError")<{
-    name: string;
-  }> {}
+export class VmAlreadyRunningError extends Data.TaggedError(
+  "VmAlreadyRunningError"
+)<{
+  name: string;
+}> {}
 
 export class CommandError extends Data.TaggedError("CommandError")<{
   cause?: unknown;
@@ -26,7 +27,7 @@ const findVm = (name: string) =>
     getInstanceState(name),
     Effect.flatMap((vm) =>
       vm ? Effect.succeed(vm) : Effect.fail(new VmNotFoundError({ name }))
-    ),
+    )
   );
 
 const logStarting = (vm: VirtualMachine) =>
@@ -39,14 +40,15 @@ const applyFlags = (vm: VirtualMachine) => Effect.succeed(mergeFlags(vm));
 export const setupFirmware = () => setupFirmwareFilesIfNeeded();
 
 export const buildQemuArgs = (vm: VirtualMachine, firmwareArgs: string[]) => {
-  const qemu = Deno.build.arch === "aarch64"
-    ? "qemu-system-aarch64"
-    : "qemu-system-x86_64";
+  const qemu =
+    Deno.build.arch === "aarch64"
+      ? "qemu-system-aarch64"
+      : "qemu-system-x86_64";
 
   return Effect.succeed([
     ..._.compact([vm.bridge && qemu]),
-    ...Deno.build.os === "darwin" ? ["-accel", "hvf"] : ["-enable-kvm"],
-    ...Deno.build.arch === "aarch64" ? ["-machine", "virt,highmem=on"] : [],
+    ...(Deno.build.os === "darwin" ? ["-accel", "hvf"] : ["-enable-kvm"]),
+    ...(Deno.build.arch === "aarch64" ? ["-machine", "virt,highmem=on"] : []),
     "-cpu",
     vm.cpu,
     "-m",
@@ -72,7 +74,7 @@ export const buildQemuArgs = (vm: VirtualMachine, firmwareArgs: string[]) => {
       vm.drivePath && [
         "-drive",
         `file=${vm.drivePath},format=${vm.diskFormat},if=virtio`,
-      ],
+      ]
     ),
   ]);
 };
@@ -86,18 +88,19 @@ export const createLogsDir = () =>
 export const startDetachedQemu = (
   name: string,
   vm: VirtualMachine,
-  qemuArgs: string[],
+  qemuArgs: string[]
 ) => {
-  const qemu = Deno.build.arch === "aarch64"
-    ? "qemu-system-aarch64"
-    : "qemu-system-x86_64";
+  const qemu =
+    Deno.build.arch === "aarch64"
+      ? "qemu-system-aarch64"
+      : "qemu-system-x86_64";
 
   const logPath = `${LOGS_DIR}/${vm.name}.log`;
 
   const fullCommand = vm.bridge
-    ? `sudo ${qemu} ${
-      qemuArgs.slice(1).join(" ")
-    } >> "${logPath}" 2>&1 & echo $!`
+    ? `sudo ${qemu} ${qemuArgs
+        .slice(1)
+        .join(" ")} >> "${logPath}" 2>&1 & echo $!`
     : `${qemu} ${qemuArgs.join(" ")} >> "${logPath}" 2>&1 & echo $!`;
 
   return Effect.tryPromise({
@@ -106,8 +109,7 @@ export const startDetachedQemu = (
         args: ["-c", fullCommand],
         stdin: "piped",
         stdout: "piped",
-      })
-        .spawn();
+      }).spawn();
 
       // Wait 2 seconds and send "1" to boot normally
       setTimeout(async () => {
@@ -129,22 +131,24 @@ export const startDetachedQemu = (
     Effect.flatMap(({ qemuPid, logPath }) =>
       pipe(
         updateInstanceState(name, "RUNNING", qemuPid),
-        Effect.map(() => ({ vm, qemuPid, logPath })),
+        Effect.map(() => ({ vm, qemuPid, logPath }))
       )
-    ),
+    )
   );
 };
 
-const logDetachedSuccess = (
-  { vm, qemuPid, logPath }: {
-    vm: VirtualMachine;
-    qemuPid: number;
-    logPath: string;
-  },
-) =>
+const logDetachedSuccess = ({
+  vm,
+  qemuPid,
+  logPath,
+}: {
+  vm: VirtualMachine;
+  qemuPid: number;
+  logPath: string;
+}) =>
   Effect.sync(() => {
     console.log(
-      `Virtual machine ${vm.name} started in background (PID: ${qemuPid})`,
+      `Virtual machine ${vm.name} started in background (PID: ${qemuPid})`
     );
     console.log(`Logs will be written to: ${logPath}`);
   });
@@ -152,11 +156,12 @@ const logDetachedSuccess = (
 const startInteractiveQemu = (
   name: string,
   vm: VirtualMachine,
-  qemuArgs: string[],
+  qemuArgs: string[]
 ) => {
-  const qemu = Deno.build.arch === "aarch64"
-    ? "qemu-system-aarch64"
-    : "qemu-system-x86_64";
+  const qemu =
+    Deno.build.arch === "aarch64"
+      ? "qemu-system-aarch64"
+      : "qemu-system-x86_64";
 
   return Effect.tryPromise({
     try: async () => {
@@ -184,9 +189,7 @@ const startInteractiveQemu = (
 const handleError = (error: VmNotFoundError | CommandError | Error) =>
   Effect.sync(() => {
     if (error instanceof VmNotFoundError) {
-      console.error(
-        `Virtual machine with name or ID ${error.name} not found.`,
-      );
+      console.error(`Virtual machine with name or ID ${error.name} not found.`);
     } else {
       console.error(`An error occurred: ${error}`);
     }
@@ -194,7 +197,7 @@ const handleError = (error: VmNotFoundError | CommandError | Error) =>
   });
 
 export const createVolumeIfNeeded = (
-  vm: VirtualMachine,
+  vm: VirtualMachine
 ): Effect.Effect<[VirtualMachine, Volume?], Error, never> =>
   Effect.gen(function* () {
     const { flags } = parseFlags(Deno.args);
@@ -208,7 +211,7 @@ export const createVolumeIfNeeded = (
 
     if (!vm.drivePath) {
       throw new Error(
-        `Cannot create volume: Virtual machine ${vm.name} has no drivePath defined.`,
+        `Cannot create volume: Virtual machine ${vm.name} has no drivePath defined.`
       );
     }
 
@@ -228,9 +231,7 @@ export const createVolumeIfNeeded = (
 export const failIfVMRunning = (vm: VirtualMachine) =>
   Effect.gen(function* () {
     if (vm.status === "RUNNING") {
-      return yield* Effect.fail(
-        new VmAlreadyRunningError({ name: vm.name }),
-      );
+      return yield* Effect.fail(new VmAlreadyRunningError({ name: vm.name }));
     }
     return vm;
   });
@@ -246,23 +247,26 @@ const startDetachedEffect = (name: string) =>
       pipe(
         setupFirmware(),
         Effect.flatMap((firmwareArgs) =>
-          buildQemuArgs({
-            ...vm,
-            drivePath: volume ? volume.path : vm.drivePath,
-            diskFormat: volume ? "qcow2" : vm.diskFormat,
-          }, firmwareArgs)
+          buildQemuArgs(
+            {
+              ...vm,
+              drivePath: volume ? volume.path : vm.drivePath,
+              diskFormat: volume ? "qcow2" : vm.diskFormat,
+            },
+            firmwareArgs
+          )
         ),
         Effect.flatMap((qemuArgs) =>
           pipe(
             createLogsDir(),
             Effect.flatMap(() => startDetachedQemu(name, vm, qemuArgs)),
             Effect.tap(logDetachedSuccess),
-            Effect.map(() => 0), // Exit code 0
+            Effect.map(() => 0) // Exit code 0
           )
-        ),
+        )
       )
     ),
-    Effect.catchAll(handleError),
+    Effect.catchAll(handleError)
   );
 
 const startInteractiveEffect = (name: string) =>
@@ -276,22 +280,25 @@ const startInteractiveEffect = (name: string) =>
       pipe(
         setupFirmware(),
         Effect.flatMap((firmwareArgs) =>
-          buildQemuArgs({
-            ...vm,
-            drivePath: volume ? volume.path : vm.drivePath,
-            diskFormat: volume ? "qcow2" : vm.diskFormat,
-          }, firmwareArgs)
+          buildQemuArgs(
+            {
+              ...vm,
+              drivePath: volume ? volume.path : vm.drivePath,
+              diskFormat: volume ? "qcow2" : vm.diskFormat,
+            },
+            firmwareArgs
+          )
         ),
         Effect.flatMap((qemuArgs) => startInteractiveQemu(name, vm, qemuArgs)),
-        Effect.map((status) => status.success ? 0 : (status.code || 1)),
+        Effect.map((status) => (status.success ? 0 : status.code || 1))
       )
     ),
-    Effect.catchAll(handleError),
+    Effect.catchAll(handleError)
   );
 
 export default async function (name: string, detach: boolean = false) {
   const exitCode = await Effect.runPromise(
-    detach ? startDetachedEffect(name) : startInteractiveEffect(name),
+    detach ? startDetachedEffect(name) : startInteractiveEffect(name)
   );
 
   if (detach) {
@@ -305,23 +312,20 @@ function mergeFlags(vm: VirtualMachine): VirtualMachine {
   const { flags } = parseFlags(Deno.args);
   return {
     ...vm,
-    memory: (flags.memory || flags.m)
-      ? String(flags.memory || flags.m)
-      : vm.memory,
-    cpus: (flags.cpus || flags.C) ? Number(flags.cpus || flags.C) : vm.cpus,
-    cpu: (flags.cpu || flags.c) ? String(flags.cpu || flags.c) : vm.cpu,
+    memory:
+      flags.memory || flags.m ? String(flags.memory || flags.m) : vm.memory,
+    cpus: flags.cpus || flags.C ? Number(flags.cpus || flags.C) : vm.cpus,
+    cpu: flags.cpu || flags.c ? String(flags.cpu || flags.c) : vm.cpu,
     diskFormat: flags.diskFormat ? String(flags.diskFormat) : vm.diskFormat,
-    portForward: (flags.portForward || flags.p)
-      ? String(flags.portForward || flags.p)
-      : vm.portForward,
-    drivePath: (flags.image || flags.i)
-      ? String(flags.image || flags.i)
-      : vm.drivePath,
-    bridge: (flags.bridge || flags.b)
-      ? String(flags.bridge || flags.b)
-      : vm.bridge,
-    diskSize: (flags.size || flags.s)
-      ? String(flags.size || flags.s)
-      : vm.diskSize,
+    portForward:
+      flags.portForward || flags.p
+        ? String(flags.portForward || flags.p)
+        : vm.portForward,
+    drivePath:
+      flags.image || flags.i ? String(flags.image || flags.i) : vm.drivePath,
+    bridge:
+      flags.bridge || flags.b ? String(flags.bridge || flags.b) : vm.bridge,
+    diskSize:
+      flags.size || flags.s ? String(flags.size || flags.s) : vm.diskSize,
   };
 }

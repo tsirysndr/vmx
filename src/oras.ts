@@ -17,28 +17,26 @@ export class PullImageError extends Data.TaggedError("PullImageError")<{
   cause?: unknown;
 }> {}
 
-export class CreateDirectoryError
-  extends Data.TaggedError("CreateDirectoryError")<{
-    cause?: unknown;
-  }> {}
+export class CreateDirectoryError extends Data.TaggedError(
+  "CreateDirectoryError"
+)<{
+  cause?: unknown;
+}> {}
 
-export class ImageAlreadyPulledError
-  extends Data.TaggedError("ImageAlreadyPulledError")<{
-    name: string;
-  }> {}
+export class ImageAlreadyPulledError extends Data.TaggedError(
+  "ImageAlreadyPulledError"
+)<{
+  name: string;
+}> {}
 
 export async function setupOrasBinary(): Promise<void> {
-  Deno.env.set(
-    "PATH",
-    `${CONFIG_DIR}/bin:${Deno.env.get("PATH")}`,
-  );
+  Deno.env.set("PATH", `${CONFIG_DIR}/bin:${Deno.env.get("PATH")}`);
 
   const oras = new Deno.Command("which", {
     args: ["oras"],
     stdout: "null",
     stderr: "null",
-  })
-    .spawn();
+  }).spawn();
 
   const orasStatus = await oras.status;
   if (orasStatus.success) {
@@ -62,8 +60,7 @@ export async function setupOrasBinary(): Promise<void> {
   }
 
   // https://github.com/oras-project/oras/releases/download/v1.3.0/oras_1.3.0_darwin_amd64.tar.gz
-  const downloadUrl =
-    `https://github.com/oras-project/oras/releases/download/v${version}/oras_${version}_${os}_${arch}.tar.gz`;
+  const downloadUrl = `https://github.com/oras-project/oras/releases/download/v${version}/oras_${version}_${os}_${arch}.tar.gz`;
 
   console.log(`Downloading ORAS from ${chalk.greenBright(downloadUrl)}`);
 
@@ -72,8 +69,7 @@ export async function setupOrasBinary(): Promise<void> {
     stdout: "inherit",
     stderr: "inherit",
     cwd: "/tmp",
-  })
-    .spawn();
+  }).spawn();
 
   const status = await downloadProcess.status;
   if (!status.success) {
@@ -84,17 +80,11 @@ export async function setupOrasBinary(): Promise<void> {
   console.log("Extracting ORAS binary...");
 
   const extractProcess = new Deno.Command("tar", {
-    args: [
-      "-xzf",
-      `oras_${version}_${os}_${arch}.tar.gz`,
-      "-C",
-      "./",
-    ],
+    args: ["-xzf", `oras_${version}_${os}_${arch}.tar.gz`, "-C", "./"],
     stdout: "inherit",
     stderr: "inherit",
     cwd: "/tmp",
-  })
-    .spawn();
+  }).spawn();
 
   const extractStatus = await extractProcess.status;
   if (!extractStatus.success) {
@@ -106,18 +96,11 @@ export async function setupOrasBinary(): Promise<void> {
 
   await Deno.mkdir(`${CONFIG_DIR}/bin`, { recursive: true });
 
-  await Deno.rename(
-    `/tmp/oras`,
-    `${CONFIG_DIR}/bin/oras`,
-  );
+  await Deno.rename(`/tmp/oras`, `${CONFIG_DIR}/bin/oras`);
   await Deno.chmod(`${CONFIG_DIR}/bin/oras`, 0o755);
 
   console.log(
-    `ORAS binary installed at ${
-      chalk.greenBright(
-        `${CONFIG_DIR}/bin/oras`,
-      )
-    }`,
+    `ORAS binary installed at ${chalk.greenBright(`${CONFIG_DIR}/bin/oras`)}`
   );
 }
 
@@ -155,9 +138,11 @@ const formatRepository = (repository: string) =>
     ? repository
     : `docker.io/${repository}`;
 
-const pushToRegistry = (
-  img: { repository: string; tag: string; path: string },
-) =>
+const pushToRegistry = (img: {
+  repository: string;
+  tag: string;
+  path: string;
+}) =>
   Effect.tryPromise({
     try: async () => {
       console.log(`Pushing image ${formatRepository(img.repository)}...`);
@@ -170,9 +155,9 @@ const pushToRegistry = (
           "--annotation",
           `org.opencontainers.image.architecture=${getCurrentArch()}`,
           "--annotation",
-          "org.opencontainers.image.os=freebsd",
+          "org.opencontainers.image.os=linux",
           "--annotation",
-          "org.opencontainers.image.description=QEMU raw disk image of FreeBSD",
+          "org.opencontainers.image.description=QEMU raw disk image",
           basename(img.path),
         ],
         stdout: "inherit",
@@ -211,12 +196,10 @@ const checkIfImageAlreadyPulled = (image: string) =>
     Effect.flatMap(getImage),
     Effect.flatMap((img) => {
       if (img) {
-        return Effect.fail(
-          new ImageAlreadyPulledError({ name: image }),
-        );
+        return Effect.fail(new ImageAlreadyPulledError({ name: image }));
       }
       return Effect.succeed(void 0);
-    }),
+    })
   );
 
 export const pullFromRegistry = (image: string) =>
@@ -228,7 +211,7 @@ export const pullFromRegistry = (image: string) =>
         const tag = image.split(":")[1] || "latest";
         console.log(
           "pull",
-          `${formatRepository(repository)}:${tag}-${getCurrentArch()}`,
+          `${formatRepository(repository)}:${tag}-${getCurrentArch()}`
         );
 
         const process = new Deno.Command("oras", {
@@ -251,7 +234,7 @@ export const pullFromRegistry = (image: string) =>
         new PullImageError({
           cause: error instanceof Error ? error.message : String(error),
         }),
-    }),
+    })
   );
 
 export const getImageArchivePath = (image: string) =>
@@ -285,13 +268,11 @@ export const getImageArchivePath = (image: string) =>
         !layers[0].annotations["org.opencontainers.image.title"]
       ) {
         throw new Error(
-          `No title annotation found for layer in image ${image}`,
+          `No title annotation found for layer in image ${image}`
         );
       }
 
-      const path = `${IMAGE_DIR}/${
-        layers[0].annotations["org.opencontainers.image.title"]
-      }`;
+      const path = `${IMAGE_DIR}/${layers[0].annotations["org.opencontainers.image.title"]}`;
 
       if (!(await Deno.stat(path).catch(() => false))) {
         throw new Error(`Image archive not found at expected path ${path}`);
@@ -343,12 +324,7 @@ const extractImage = (path: string) =>
     try: async () => {
       console.log("Extracting image archive...");
       const tarProcess = new Deno.Command("tar", {
-        args: [
-          "-xSzf",
-          path,
-          "-C",
-          dirname(path),
-        ],
+        args: ["-xSzf", path, "-C", dirname(path)],
         stdout: "inherit",
         stderr: "inherit",
         cwd: IMAGE_DIR,
@@ -366,11 +342,7 @@ const extractImage = (path: string) =>
       }),
   });
 
-const savePulledImage = (
-  imagePath: string,
-  digest: string,
-  name: string,
-) =>
+const savePulledImage = (imagePath: string, digest: string, name: string) =>
   Effect.gen(function* () {
     yield* saveImage({
       id: createId(),
@@ -396,9 +368,9 @@ export const pushImage = (image: string) =>
           return Effect.succeed(void 0);
         }),
         Effect.flatMap(() => pushToRegistry(img)),
-        Effect.flatMap(cleanup),
+        Effect.flatMap(cleanup)
       )
-    ),
+    )
   );
 
 export const pullImage = (image: string) =>
@@ -419,5 +391,6 @@ export const pullImage = (image: string) =>
     ),
     Effect.flatMap(cleanup),
     Effect.catchTag("ImageAlreadyPulledError", () =>
-      Effect.sync(() => console.log(`Image ${image} is already pulled.`))),
+      Effect.sync(() => console.log(`Image ${image} is already pulled.`))
+    )
   );
