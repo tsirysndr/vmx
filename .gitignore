@@ -4,3 +4,4 @@ vmconfig.toml
 .env
 *.fd
 vmlinux
+*.tar.gz
