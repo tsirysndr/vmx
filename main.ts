@@ -96,15 +96,15 @@ if (import.meta.main) {
     )
     .example(
       "Local ISO file",
-      "vmx /path/to/freebsd.iso",
+      "vmx /path/to/image.iso",
     )
     .example(
       "Download URL",
-      "vmx https://download.freebsd.org/ftp/releases/ISO-IMAGES/14.3/FreeBSD-14.3-RELEASE-amd64-disc1.iso",
+      "vmx https://cdimage.ubuntu.com/releases/24.04/release/ubuntu-24.04.3-live-server-arm64.iso",
     )
     .example(
       "From OCI Registry",
-      "vmx ghcr.io/tsirysndr/freebsd:15.0-BETA4",
+      "vmx ghcr.io/tsirysndr/ubuntu:24.04",
     )
     .example(
       "List running VMs",
