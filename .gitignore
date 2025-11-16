@@ -1,0 +1,5 @@
+*.iso
+*.img
+vmconfig.toml
+.env
+*.fd
