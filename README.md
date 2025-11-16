@@ -53,8 +53,7 @@ A powerful command-line tool and HTTP API for managing and running headless virt
 
 ```bash
 # Install with Deno
-deno install -A -n vmx jsr:@tsiry/vmx
-
+ deno install -A -r -f -g --config deno.json ./main.ts -n vmx
 ```
 
 ### Requirements
