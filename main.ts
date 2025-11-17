@@ -23,6 +23,7 @@ import restart from "./src/subcommands/restart.ts";
 import rm from "./src/subcommands/rm.ts";
 import rmi from "./src/subcommands/rmi.ts";
 import run from "./src/subcommands/run.ts";
+import serve from "./src/subcommands/serve.ts";
 import start from "./src/subcommands/start.ts";
 import stop from "./src/subcommands/stop.ts";
 import tag from "./src/subcommands/tag.ts";
@@ -37,7 +38,6 @@ import {
   type Options,
   runQemu,
 } from "./src/utils.ts";
-import serve from "./src/subcommands/serve.ts";
 
 export * from "./src/mod.ts";
 
@@ -128,6 +128,8 @@ if (import.meta.main) {
     )
     .action(async (options: Options, input?: string) => {
       const program = Effect.gen(function* () {
+        let isoPath: string | null = null;
+
         if (input) {
           const [image, archivePath] = yield* Effect.all([
             getImage(input),
@@ -144,8 +146,22 @@ if (import.meta.main) {
             });
             return;
           }
+
+          if (isValidISOurl(input)) {
+            isoPath = yield* downloadIso(input, options);
+          }
+
+          if (yield* pipe(
+              fileExists(input),
+              Effect.map(() => true),
+              Effect.catchAll(() => Effect.succeed(false)))
+            ) {
+              if (input.endsWith(".iso")) {
+                isoPath = input;
+              }
+            }
+
         }
-        let isoPath: string | null = null;
 
 
         const config = yield* pipe(
