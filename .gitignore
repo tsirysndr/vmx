@@ -5,3 +5,7 @@ vmconfig.toml
 *.fd
 vmlinux
 *.tar.gz
+*.qcow2
+*.xz
+*.bu
+*.ign

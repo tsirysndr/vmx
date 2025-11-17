@@ -1,5 +1,6 @@
 import _ from "@es-toolkit/es-toolkit/compat";
 import { createId } from "@paralleldrive/cuid2";
+import { dirname } from "@std/path";
 import chalk from "chalk";
 import { Data, Effect, pipe } from "effect";
 import Moniker from "moniker";
@@ -290,6 +291,38 @@ export function setupNATNetworkArgs(portForward?: string): string {
   return `user,id=net0,${portForwarding}`;
 }
 
+export const setupCoreOSArgs = (imagePath: string | null) =>
+  Effect.gen(function* () {
+    if (
+      imagePath &&
+      imagePath.endsWith(".qcow2") &&
+      imagePath.includes("coreos")
+    ) {
+      const configOK = yield* pipe(
+        fileExists("config.ign"),
+        Effect.flatMap(() => Effect.succeed(true)),
+        Effect.catchAll(() => Effect.succeed(false))
+      );
+      if (!configOK) {
+        console.error(
+          chalk.redBright(
+            "CoreOS image requires a config.ign file in the current directory."
+          )
+        );
+        Deno.exit(1);
+      }
+
+      return [
+        "-drive",
+        `file=${imagePath},format=qcow2,if=virtio`,
+        "-fw_cfg",
+        "name=opt/com.coreos/config,file=config.ign",
+      ];
+    }
+
+    return [];
+  });
+
 export const runQemu = (isoPath: string | null, options: Options) =>
   Effect.gen(function* () {
     const macAddress = yield* generateRandomMacAddress();
@@ -300,6 +333,7 @@ export const runQemu = (isoPath: string | null, options: Options) =>
         : "qemu-system-x86_64";
 
     const firmwareFiles = yield* setupFirmwareFilesIfNeeded();
+    const coreosArgs: string[] = yield* setupCoreOSArgs(isoPath);
 
     const qemuArgs = [
       ..._.compact([options.bridge && qemu]),
@@ -327,6 +361,7 @@ export const runQemu = (isoPath: string | null, options: Options) =>
       "-serial",
       "chardev:con0",
       ...firmwareFiles,
+      ...coreosArgs,
       ..._.compact(
         options.image && [
           "-drive",
@@ -561,3 +596,27 @@ export const constructCoreOSImageURL = (
     })
   );
 };
+
+export const extractXz = (path: string | null) =>
+  Effect.tryPromise({
+    try: async () => {
+      if (!path) {
+        return null;
+      }
+      const cmd = new Deno.Command("xz", {
+        args: ["-d", path],
+        stdin: "inherit",
+        stdout: "inherit",
+        stderr: "inherit",
+        cwd: dirname(path),
+      }).spawn();
+
+      const status = await cmd.status;
+      if (!status.success) {
+        console.error(chalk.redBright("Failed to extract xz file."));
+        Deno.exit(status.code);
+      }
+      return path.replace(/\.xz$/, "");
+    },
+    catch: (error) => new LogCommandError({ cause: error }),
+  });
