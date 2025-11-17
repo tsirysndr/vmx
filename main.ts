@@ -3,12 +3,14 @@
 import { Command } from "@cliffy/command";
 import { Secret } from "@cliffy/prompt";
 import { readAll } from "@std/io";
+import { basename } from "@std/path";
 import chalk from "chalk";
 import { Effect, pipe } from "effect";
 import pkg from "./deno.json" with { type: "json" };
 import { initVmFile, mergeConfig, parseVmFile } from "./src/config.ts";
 import { CONFIG_FILE_NAME } from "./src/constants.ts";
 import { getImage } from "./src/images.ts";
+import { constructCoreOSImageURL } from "./src/mod.ts";
 import { createBridgeNetworkIfNeeded } from "./src/network.ts";
 import { getImageArchivePath } from "./src/oras.ts";
 import images from "./src/subcommands/images.ts";
@@ -32,6 +34,7 @@ import {
   createDriveImageIfNeeded,
   downloadIso,
   emptyDiskImage,
+  extractXz,
   fileExists,
   isValidISOurl,
   NoSuchFileError,
@@ -151,18 +154,40 @@ if (import.meta.main) {
             isoPath = yield* downloadIso(input, options);
           }
 
-          if (yield* pipe(
+          if (
+            yield* pipe(
               fileExists(input),
               Effect.map(() => true),
-              Effect.catchAll(() => Effect.succeed(false)))
-            ) {
-              if (input.endsWith(".iso")) {
-                isoPath = input;
-              }
+              Effect.catchAll(() => Effect.succeed(false)),
+            )
+          ) {
+            if (input.endsWith(".iso")) {
+              isoPath = input;
             }
+          }
 
+          const coreOSImageURL = yield* pipe(
+            constructCoreOSImageURL(input),
+            Effect.catchAll(() => Effect.succeed(null)),
+          );
+
+          if (coreOSImageURL) {
+            const cached = yield* pipe(
+              basename(coreOSImageURL).replace(".xz", ""),
+              fileExists,
+              Effect.flatMap(() => Effect.succeed(true)),
+              Effect.catchAll(() => Effect.succeed(false)),
+            );
+            if (!cached) {
+              isoPath = yield* pipe(
+                downloadIso(coreOSImageURL, options),
+                Effect.flatMap((xz) => extractXz(xz)),
+              );
+            } else {
+              isoPath = basename(coreOSImageURL).replace(".xz", "");
+            }
+          }
         }
-
 
         const config = yield* pipe(
           fileExists(CONFIG_FILE_NAME),
@@ -182,6 +207,28 @@ if (import.meta.main) {
 
         if (!input && (isValidISOurl(config?.vm?.iso))) {
           isoPath = yield* downloadIso(config!.vm!.iso!, options);
+        }
+
+        if (!input && config?.vm?.iso) {
+          const coreOSImageURL = yield* pipe(
+            constructCoreOSImageURL(config.vm.iso),
+            Effect.catchAll(() => Effect.succeed(null)),
+          );
+
+          if (coreOSImageURL) {
+            const cached = yield* pipe(
+              basename(coreOSImageURL).replace(".xz", ""),
+              fileExists,
+              Effect.flatMap(() => Effect.succeed(true)),
+              Effect.catchAll(() => Effect.succeed(false)),
+            );
+            if (!cached) {
+              const xz = yield* downloadIso(coreOSImageURL, options);
+              isoPath = yield* extractXz(xz);
+            } else {
+              isoPath = basename(coreOSImageURL).replace(".xz", "");
+            }
+          }
         }
 
         options = yield* mergeConfig(config, options);

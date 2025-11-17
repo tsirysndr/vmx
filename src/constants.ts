@@ -8,3 +8,6 @@ export const VOLUME_DIR: string = `${CONFIG_DIR}/volumes`;
 export const UBUNTU_ISO_URL: string = Deno.build.arch === "aarch64"
   ? "https://cdimage.ubuntu.com/releases/24.04/release/ubuntu-24.04.3-live-server-arm64.iso"
   : "https://releases.ubuntu.com/24.04.3/ubuntu-24.04.3-live-server-amd64.iso";
+export const FEDORA_COREOS_DEFAULT_VERSION: string = "43.20251024.3.0";
+export const FEDORA_COREOS_IMG_URL: string =
+  `https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/${FEDORA_COREOS_DEFAULT_VERSION}/${Deno.build.arch}/fedora-coreos-${FEDORA_COREOS_DEFAULT_VERSION}-qemu.${Deno.build.arch}.qcow2.xz`;

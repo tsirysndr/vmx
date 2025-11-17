@@ -1,9 +1,15 @@
 import _ from "@es-toolkit/es-toolkit/compat";
 import { createId } from "@paralleldrive/cuid2";
+import { dirname } from "@std/path";
 import chalk from "chalk";
 import { Data, Effect, pipe } from "effect";
 import Moniker from "moniker";
-import { EMPTY_DISK_THRESHOLD_KB, LOGS_DIR } from "./constants.ts";
+import {
+  EMPTY_DISK_THRESHOLD_KB,
+  FEDORA_COREOS_DEFAULT_VERSION,
+  FEDORA_COREOS_IMG_URL,
+  LOGS_DIR,
+} from "./constants.ts";
 import type { Image } from "./db.ts";
 import { generateRandomMacAddress } from "./network.ts";
 import { saveInstanceState, updateInstanceState } from "./state.ts";
@@ -56,7 +62,7 @@ export const getCurrentArch = (): string => {
 export const isValidISOurl = (url?: string): boolean => {
   return Boolean(
     (url?.startsWith("http://") || url?.startsWith("https://")) &&
-      url?.endsWith(".iso")
+      url?.endsWith(".iso"),
   );
 };
 
@@ -82,7 +88,7 @@ export const humanFileSize = (blocks: number) =>
   });
 
 export const validateImage = (
-  image: string
+  image: string,
 ): Effect.Effect<string, InvalidImageNameError, never> => {
   const regex =
     /^(?:[a-zA-Z0-9.-]+(?:\.[a-zA-Z0-9.-]+)*\/)?[a-z0-9]+(?:[._-][a-z0-9]+)*\/[a-z0-9]+(?:[._-][a-z0-9]+)*(?::[a-zA-Z0-9._-]+)?$/;
@@ -93,7 +99,7 @@ export const validateImage = (
         image,
         cause:
           "Image name does not conform to expected format. Should be in the format 'repository/name:tag'.",
-      })
+      }),
     );
   }
   return Effect.succeed(image);
@@ -102,18 +108,18 @@ export const validateImage = (
 export const extractTag = (name: string) =>
   pipe(
     validateImage(name),
-    Effect.flatMap((image) => Effect.succeed(image.split(":")[1] || "latest"))
+    Effect.flatMap((image) => Effect.succeed(image.split(":")[1] || "latest")),
   );
 
 export const failOnMissingImage = (
-  image: Image | undefined
+  image: Image | undefined,
 ): Effect.Effect<Image, Error, never> =>
   image
     ? Effect.succeed(image)
     : Effect.fail(new NoSuchImageError({ cause: "No such image" }));
 
 export const du = (
-  path: string
+  path: string,
 ): Effect.Effect<number, LogCommandError, never> =>
   Effect.tryPromise({
     try: async () => {
@@ -145,7 +151,7 @@ export const emptyDiskImage = (path: string) =>
       exists
         ? Effect.succeed(true)
         : du(path).pipe(Effect.map((size) => size < EMPTY_DISK_THRESHOLD_KB))
-    )
+    ),
   );
 
 export const downloadIso = (url: string, options: Options) =>
@@ -167,8 +173,8 @@ export const downloadIso = (url: string, options: Options) =>
         if (driveSize > EMPTY_DISK_THRESHOLD_KB) {
           console.log(
             chalk.yellowBright(
-              `Drive image ${options.image} is not empty (size: ${driveSize} KB), skipping ISO download to avoid overwriting existing data.`
-            )
+              `Drive image ${options.image} is not empty (size: ${driveSize} KB), skipping ISO download to avoid overwriting existing data.`,
+            ),
           );
           return null;
         }
@@ -186,8 +192,8 @@ export const downloadIso = (url: string, options: Options) =>
     if (outputExists) {
       console.log(
         chalk.yellowBright(
-          `File ${outputPath} already exists, skipping download.`
-        )
+          `File ${outputPath} already exists, skipping download.`,
+        ),
       );
       return outputPath;
     }
@@ -236,8 +242,8 @@ export const setupFirmwareFilesIfNeeded = () =>
     if (!success) {
       console.error(
         chalk.redBright(
-          "Failed to get QEMU prefix from Homebrew. Ensure QEMU is installed via Homebrew."
-        )
+          "Failed to get QEMU prefix from Homebrew. Ensure QEMU is installed via Homebrew.",
+        ),
       );
       Deno.exit(1);
     }
@@ -250,7 +256,7 @@ export const setupFirmwareFilesIfNeeded = () =>
       try: () =>
         Deno.copyFile(
           `${brewPrefix}/share/qemu/edk2-arm-vars.fd`,
-          edk2VarsAarch64
+          edk2VarsAarch64,
         ),
       catch: (error) => new LogCommandError({ cause: error }),
     });
@@ -285,16 +291,48 @@ export function setupNATNetworkArgs(portForward?: string): string {
   return `user,id=net0,${portForwarding}`;
 }
 
+export const setupCoreOSArgs = (imagePath: string | null) =>
+  Effect.gen(function* () {
+    if (
+      imagePath &&
+      imagePath.endsWith(".qcow2") &&
+      imagePath.includes("coreos")
+    ) {
+      const configOK = yield* pipe(
+        fileExists("config.ign"),
+        Effect.flatMap(() => Effect.succeed(true)),
+        Effect.catchAll(() => Effect.succeed(false)),
+      );
+      if (!configOK) {
+        console.error(
+          chalk.redBright(
+            "CoreOS image requires a config.ign file in the current directory.",
+          ),
+        );
+        Deno.exit(1);
+      }
+
+      return [
+        "-drive",
+        `file=${imagePath},format=qcow2,if=virtio`,
+        "-fw_cfg",
+        "name=opt/com.coreos/config,file=config.ign",
+      ];
+    }
+
+    return [];
+  });
+
 export const runQemu = (isoPath: string | null, options: Options) =>
   Effect.gen(function* () {
     const macAddress = yield* generateRandomMacAddress();
 
-    const qemu =
-      Deno.build.arch === "aarch64"
-        ? "qemu-system-aarch64"
-        : "qemu-system-x86_64";
+    const qemu = Deno.build.arch === "aarch64"
+      ? "qemu-system-aarch64"
+      : "qemu-system-x86_64";
 
     const firmwareFiles = yield* setupFirmwareFilesIfNeeded();
+    const coreosArgs: string[] = yield* setupCoreOSArgs(isoPath);
 
     const qemuArgs = [
       ..._.compact([options.bridge && qemu]),
@@ -306,7 +344,7 @@ export const runQemu = (isoPath: string | null, options: Options) =>
       options.memory,
       "-smp",
       options.cpus.toString(),
-      ..._.compact([isoPath && "-cdrom", isoPath]),
+      ...(isoPath && isoPath.endsWith(".iso") ? ["-cdrom", isoPath] : []),
       "-netdev",
       options.bridge
         ? `bridge,id=net0,br=${options.bridge}`
@@ -322,11 +360,12 @@ export const runQemu = (isoPath: string | null, options: Options) =>
       "-serial",
       "chardev:con0",
       ...firmwareFiles,
+      ...coreosArgs,
       ..._.compact(
         options.image && [
           "-drive",
           `file=${options.image},format=${options.diskFormat},if=virtio`,
-        ]
+        ],
       ),
     ];
 
@@ -341,9 +380,11 @@ export const runQemu = (isoPath: string | null, options: Options) =>
       const logPath = `${LOGS_DIR}/${name}.log`;
 
       const fullCommand = options.bridge
-        ? `sudo ${qemu} ${qemuArgs
+        ? `sudo ${qemu} ${
+          qemuArgs
             .slice(1)
-            .join(" ")} >> "${logPath}" 2>&1 & echo $!`
+            .join(" ")
+        } >> "${logPath}" 2>&1 & echo $!`
         : `${qemu} ${qemuArgs.join(" ")} >> "${logPath}" 2>&1 & echo $!`;
 
       const { stdout } = yield* Effect.tryPromise({
@@ -379,7 +420,7 @@ export const runQemu = (isoPath: string | null, options: Options) =>
       });
 
       console.log(
-        `Virtual machine ${name} started in background (PID: ${qemuPid})`
+        `Virtual machine ${name} started in background (PID: ${qemuPid})`,
       );
       console.log(`Logs will be written to: ${logPath}`);
 
@@ -501,8 +542,8 @@ export const createDriveImageIfNeeded = ({
     if (pathExists) {
       console.log(
         chalk.yellowBright(
-          `Drive image ${path} already exists, skipping creation.`
-        )
+          `Drive image ${path} already exists, skipping creation.`,
+        ),
       );
       return;
     }
@@ -529,9 +570,54 @@ export const createDriveImageIfNeeded = ({
   });
 
 export const fileExists = (
-  path: string
+  path: string,
 ): Effect.Effect<void, NoSuchFileError, never> =>
   Effect.tryPromise({
     try: () => Deno.stat(path),
     catch: (error) => new NoSuchFileError({ cause: String(error) }),
+  });
+
+export const constructCoreOSImageURL = (
+  image: string,
+): Effect.Effect<string, InvalidImageNameError, never> => {
+  // detect with regex if image matches coreos pattern: fedora-coreos or fedora-coreos-<version> or coreos or coreos-<version>
+  const coreosRegex = /^(fedora-coreos|coreos)(-(\d+\.\d+\.\d+\.\d+))?$/;
+  const match = image.match(coreosRegex);
+  if (match) {
+    const version = match[3] || FEDORA_COREOS_DEFAULT_VERSION;
+    return Effect.succeed(
+      FEDORA_COREOS_IMG_URL.replaceAll(FEDORA_COREOS_DEFAULT_VERSION, version),
+    );
+  }
+
+  return Effect.fail(
+    new InvalidImageNameError({
+      image,
+      cause: "Image name does not match CoreOS naming conventions.",
+    }),
+  );
+};
+
+export const extractXz = (path: string | null) =>
+  Effect.tryPromise({
+    try: async () => {
+      if (!path) {
+        return null;
+      }
+      const cmd = new Deno.Command("xz", {
+        args: ["-d", path],
+        stdin: "inherit",
+        stdout: "inherit",
+        stderr: "inherit",
+        cwd: dirname(path),
+      }).spawn();
+
+      const status = await cmd.status;
+      if (!status.success) {
+        console.error(chalk.redBright("Failed to extract xz file."));
+        Deno.exit(status.code);
+      }
+      return path.replace(/\.xz$/, "");
+    },
+    catch: (error) => new LogCommandError({ cause: error }),
   });

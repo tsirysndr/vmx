@@ -17,7 +17,7 @@ export default function () {
     console.log(`Using API token: ${token}`);
   } else {
     console.log(
-      `Using provided API token from environment variable VMX_API_TOKEN`
+      `Using provided API token from environment variable VMX_API_TOKEN`,
     );
   }
 
@@ -39,7 +39,7 @@ export default function () {
       flags.p ||
       (Deno.env.get("VMX_API_PORT")
         ? Number(Deno.env.get("VMX_API_PORT"))
-        : 8889)
+        : 8889),
   );
 
   Deno.serve({ port }, app.fetch);

@@ -18,13 +18,13 @@ export class PullImageError extends Data.TaggedError("PullImageError")<{
 }> {}
 
 export class CreateDirectoryError extends Data.TaggedError(
-  "CreateDirectoryError"
+  "CreateDirectoryError",
 )<{
   cause?: unknown;
 }> {}
 
 export class ImageAlreadyPulledError extends Data.TaggedError(
-  "ImageAlreadyPulledError"
+  "ImageAlreadyPulledError",
 )<{
   name: string;
 }> {}
@@ -60,7 +60,8 @@ export async function setupOrasBinary(): Promise<void> {
   }
 
   // https://github.com/oras-project/oras/releases/download/v1.3.0/oras_1.3.0_darwin_amd64.tar.gz
-  const downloadUrl = `https://github.com/oras-project/oras/releases/download/v${version}/oras_${version}_${os}_${arch}.tar.gz`;
+  const downloadUrl =
+    `https://github.com/oras-project/oras/releases/download/v${version}/oras_${version}_${os}_${arch}.tar.gz`;
 
   console.log(`Downloading ORAS from ${chalk.greenBright(downloadUrl)}`);
 
@@ -100,7 +101,7 @@ export async function setupOrasBinary(): Promise<void> {
   await Deno.chmod(`${CONFIG_DIR}/bin/oras`, 0o755);
 
   console.log(
-    `ORAS binary installed at ${chalk.greenBright(`${CONFIG_DIR}/bin/oras`)}`
+    `ORAS binary installed at ${chalk.greenBright(`${CONFIG_DIR}/bin/oras`)}`,
   );
 }
 
@@ -199,7 +200,7 @@ const checkIfImageAlreadyPulled = (image: string) =>
         return Effect.fail(new ImageAlreadyPulledError({ name: image }));
       }
       return Effect.succeed(void 0);
-    })
+    }),
   );
 
 export const pullFromRegistry = (image: string) =>
@@ -211,7 +212,7 @@ export const pullFromRegistry = (image: string) =>
         const tag = image.split(":")[1] || "latest";
         console.log(
           "pull",
-          `${formatRepository(repository)}:${tag}-${getCurrentArch()}`
+          `${formatRepository(repository)}:${tag}-${getCurrentArch()}`,
         );
 
         const process = new Deno.Command("oras", {
@@ -234,7 +235,7 @@ export const pullFromRegistry = (image: string) =>
         new PullImageError({
           cause: error instanceof Error ? error.message : String(error),
         }),
-    })
+    }),
   );
 
 export const getImageArchivePath = (image: string) =>
@@ -268,11 +269,13 @@ export const getImageArchivePath = (image: string) =>
         !layers[0].annotations["org.opencontainers.image.title"]
       ) {
         throw new Error(
-          `No title annotation found for layer in image ${image}`
+          `No title annotation found for layer in image ${image}`,
         );
       }
 
-      const path = `${IMAGE_DIR}/${layers[0].annotations["org.opencontainers.image.title"]}`;
+      const path = `${IMAGE_DIR}/${
+        layers[0].annotations["org.opencontainers.image.title"]
+      }`;
 
       if (!(await Deno.stat(path).catch(() => false))) {
         throw new Error(`Image archive not found at expected path ${path}`);
@@ -368,9 +371,9 @@ export const pushImage = (image: string) =>
           return Effect.succeed(void 0);
         }),
         Effect.flatMap(() => pushToRegistry(img)),
-        Effect.flatMap(cleanup)
+        Effect.flatMap(cleanup),
       )
-    )
+    ),
   );
 
 export const pullImage = (image: string) =>
@@ -391,6 +394,5 @@ export const pullImage = (image: string) =>
     ),
     Effect.flatMap(cleanup),
     Effect.catchTag("ImageAlreadyPulledError", () =>
-      Effect.sync(() => console.log(`Image ${image} is already pulled.`))
-    )
+      Effect.sync(() => console.log(`Image ${image} is already pulled.`))),
   );
