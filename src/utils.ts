@@ -3,7 +3,12 @@ import { createId } from "@paralleldrive/cuid2";
 import chalk from "chalk";
 import { Data, Effect, pipe } from "effect";
 import Moniker from "moniker";
-import { EMPTY_DISK_THRESHOLD_KB, LOGS_DIR } from "./constants.ts";
+import {
+  EMPTY_DISK_THRESHOLD_KB,
+  FEDORA_COREOS_DEFAULT_VERSION,
+  FEDORA_COREOS_IMG_URL,
+  LOGS_DIR,
+} from "./constants.ts";
 import type { Image } from "./db.ts";
 import { generateRandomMacAddress } from "./network.ts";
 import { saveInstanceState, updateInstanceState } from "./state.ts";
@@ -535,3 +540,24 @@ export const fileExists = (
     try: () => Deno.stat(path),
     catch: (error) => new NoSuchFileError({ cause: String(error) }),
   });
+
+export const constructCoreOSImageURL = (
+  image: string
+): Effect.Effect<string, InvalidImageNameError, never> => {
+  // detect with regex if image matches coreos pattern: fedora-coreos or fedora-coreos-<version> or coreos or coreos-<version>
+  const coreosRegex = /^(fedora-coreos|coreos)(-(\d+\.\d+\.\d+\.\d+))?$/;
+  const match = image.match(coreosRegex);
+  if (match) {
+    const version = match[3] || FEDORA_COREOS_DEFAULT_VERSION;
+    return Effect.succeed(
+      FEDORA_COREOS_IMG_URL.replaceAll(FEDORA_COREOS_DEFAULT_VERSION, version)
+    );
+  }
+
+  return Effect.fail(
+    new InvalidImageNameError({
+      image,
+      cause: "Image name does not match CoreOS naming conventions.",
+    })
+  );
+};
