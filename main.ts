@@ -154,19 +154,21 @@ if (import.meta.main) {
             isoPath = yield* downloadIso(input, options);
           }
 
-          if (yield* pipe(
+          if (
+            yield* pipe(
               fileExists(input),
               Effect.map(() => true),
-              Effect.catchAll(() => Effect.succeed(false)))
-            ) {
-              if (input.endsWith(".iso")) {
-                isoPath = input;
-              }
+              Effect.catchAll(() => Effect.succeed(false)),
+            )
+          ) {
+            if (input.endsWith(".iso")) {
+              isoPath = input;
             }
+          }
 
           const coreOSImageURL = yield* pipe(
             constructCoreOSImageURL(input),
-            Effect.catchAll(() => Effect.succeed(null))
+            Effect.catchAll(() => Effect.succeed(null)),
           );
 
           if (coreOSImageURL) {
@@ -174,7 +176,7 @@ if (import.meta.main) {
               basename(coreOSImageURL).replace(".xz", ""),
               fileExists,
               Effect.flatMap(() => Effect.succeed(true)),
-              Effect.catchAll(() => Effect.succeed(false))
+              Effect.catchAll(() => Effect.succeed(false)),
             );
             if (!cached) {
               isoPath = yield* pipe(
@@ -185,9 +187,7 @@ if (import.meta.main) {
               isoPath = basename(coreOSImageURL).replace(".xz", "");
             }
           }
-
         }
-
 
         const config = yield* pipe(
           fileExists(CONFIG_FILE_NAME),
@@ -212,7 +212,7 @@ if (import.meta.main) {
         if (!input && config?.vm?.iso) {
           const coreOSImageURL = yield* pipe(
             constructCoreOSImageURL(config.vm.iso),
-            Effect.catchAll(() => Effect.succeed(null))
+            Effect.catchAll(() => Effect.succeed(null)),
           );
 
           if (coreOSImageURL) {
@@ -220,7 +220,7 @@ if (import.meta.main) {
               basename(coreOSImageURL).replace(".xz", ""),
               fileExists,
               Effect.flatMap(() => Effect.succeed(true)),
-              Effect.catchAll(() => Effect.succeed(false))
+              Effect.catchAll(() => Effect.succeed(false)),
             );
             if (!cached) {
               const xz = yield* downloadIso(coreOSImageURL, options);

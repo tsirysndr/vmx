@@ -1,35 +1,44 @@
 # vmx
 
-A powerful command-line tool and HTTP API for managing and running headless virtual machines using QEMU. Built with Deno and TypeScript, vmx provides a Docker-like experience for VM management with OCI registry support.
+A powerful command-line tool and HTTP API for managing and running headless
+virtual machines using QEMU. Built with Deno and TypeScript, vmx provides a
+Docker-like experience for VM management with OCI registry support.
 
 ## Features
 
 ### 🚀 Core Functionality
 
 - **Headless VM Management** - Run VMs in the background without GUI overhead
-- **QEMU Integration** - Leverages QEMU for robust virtualization on both x86_64 and ARM64 architectures
-- **Docker-like CLI** - Familiar commands for VM lifecycle management (run, start, stop, ps, rm, etc.)
+- **QEMU Integration** - Leverages QEMU for robust virtualization on both x86_64
+  and ARM64 architectures
+- **Docker-like CLI** - Familiar commands for VM lifecycle management (run,
+  start, stop, ps, rm, etc.)
 - **Configuration Files** - TOML-based configuration for reproducible VM setups
-- **Multiple Input Sources** - Boot from local ISOs, remote URLs, or OCI registry images
+- **Multiple Input Sources** - Boot from local ISOs, remote URLs, or OCI
+  registry images
 
 ### 📦 OCI Registry Support
 
-- **Pull & Push** - Store and retrieve VM images from OCI-compliant registries (GitHub Container Registry, Docker Hub, etc.)
+- **Pull & Push** - Store and retrieve VM images from OCI-compliant registries
+  (GitHub Container Registry, Docker Hub, etc.)
 - **Image Management** - List, tag, and remove local VM images
 - **Authentication** - Secure login/logout for private registries
-- **Cross-platform** - Automatic architecture detection and handling (amd64/arm64)
+- **Cross-platform** - Automatic architecture detection and handling
+  (amd64/arm64)
 
 ### 🌐 Networking
 
 - **Bridge Networking** - Create and manage network bridges for VM connectivity
 - **Port Forwarding** - Easy SSH and service access with flexible port mapping
-- **Multiple Network Modes** - Support for various QEMU networking configurations
+- **Multiple Network Modes** - Support for various QEMU networking
+  configurations
 
 ### 💾 Storage & Volumes
 
 - **Volume Management** - Create, list, inspect, and delete persistent volumes
 - **Multiple Disk Formats** - Support for qcow2 and raw disk images
-- **Automatic Provisioning** - Volumes are created automatically from base images
+- **Automatic Provisioning** - Volumes are created automatically from base
+  images
 - **Flexible Sizing** - Configurable disk sizes for different workloads
 
 ### 🔧 Advanced Features
@@ -38,7 +47,8 @@ A powerful command-line tool and HTTP API for managing and running headless virt
 - **Live Logs** - Stream VM output and follow logs in real-time
 - **VM Inspection** - Detailed information about running and stopped VMs
 - **Resource Configuration** - Customizable CPU, memory, and disk settings
-- **ARM64 & x86_64 Support** - Native support for both architectures with UEFI firmware
+- **ARM64 & x86_64 Support** - Native support for both architectures with UEFI
+  firmware
 
 ### 🌍 HTTP API
 
@@ -304,7 +314,8 @@ curl http://localhost:8889/machines \
 vmx automatically detects and adapts to your system architecture:
 
 - **x86_64 / amd64** - Full QEMU system emulation
-- **ARM64 / aarch64** - Native Apple Silicon and ARM server support with UEFI firmware
+- **ARM64 / aarch64** - Native Apple Silicon and ARM server support with UEFI
+  firmware
 
 ## Examples
 

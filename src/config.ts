@@ -39,7 +39,7 @@ class VmConfigError extends Data.TaggedError("VmConfigError")<{
 }> {}
 
 export const initVmFile = (
-  path: string
+  path: string,
 ): Effect.Effect<void, VmConfigError, never> =>
   Effect.tryPromise({
     try: async () => {
@@ -64,7 +64,7 @@ export const initVmFile = (
   });
 
 export const parseVmFile = (
-  path: string
+  path: string,
 ): Effect.Effect<VmConfig, VmConfigError, never> =>
   Effect.tryPromise({
     try: async () => {
@@ -77,7 +77,7 @@ export const parseVmFile = (
 
 export const mergeConfig = (
   config: VmConfig | null,
-  options: Options
+  options: Options,
 ): Effect.Effect<Options, never, never> => {
   const { flags } = parseFlags(Deno.args);
   flags.image = flags.i || flags.image;
@@ -113,12 +113,12 @@ export const mergeConfig = (
     diskFormat: _.get(
       flags,
       "diskFormat",
-      defaultConfig.vm.disk_format!
+      defaultConfig.vm.disk_format!,
     ) as string,
     portForward: _.get(
       flags,
       "portForward",
-      defaultConfig.network.port_forward!
+      defaultConfig.network.port_forward!,
     ) as string,
     image: _.get(flags, "image", defaultConfig.vm.image!) as string,
     bridge: _.get(flags, "bridge", defaultConfig.network.bridge!) as string,
