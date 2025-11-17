@@ -311,7 +311,7 @@ export const runQemu = (isoPath: string | null, options: Options) =>
       options.memory,
       "-smp",
       options.cpus.toString(),
-      ..._.compact([isoPath && "-cdrom", isoPath]),
+      ...(isoPath && isoPath.endsWith(".iso") ? ["-cdrom", isoPath] : []),
       "-netdev",
       options.bridge
         ? `bridge,id=net0,br=${options.bridge}`
