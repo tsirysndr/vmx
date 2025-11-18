@@ -22,24 +22,24 @@ const pullImageOnMissing = (name: string): Effect.Effect<Image, Error, never> =>
           pulledImg
             ? Effect.succeed(pulledImg)
             : Effect.fail(new PullImageError({ cause: "Failed to pull image" }))
-        )
+        ),
       );
-    })
+    }),
   );
 
 const createVolumeIfNeeded = (
-  image: Image
+  image: Image,
 ): Effect.Effect<[Image, Volume?], Error, never> =>
   parseFlags(Deno.args).flags.volume
     ? Effect.gen(function* () {
-        const volumeName = parseFlags(Deno.args).flags.volume as string;
-        const volume = yield* getVolume(volumeName);
-        if (volume) {
-          return [image, volume];
-        }
-        const newVolume = yield* createVolume(volumeName, image);
-        return [image, newVolume];
-      })
+      const volumeName = parseFlags(Deno.args).flags.volume as string;
+      const volume = yield* getVolume(volumeName);
+      if (volume) {
+        return [image, volume];
+      }
+      const newVolume = yield* createVolume(volumeName, image);
+      return [image, newVolume];
+    })
     : Effect.succeed([image]);
 
 const runImage = ([image, volume]: [Image, Volume?]) =>
@@ -73,8 +73,8 @@ export default async function (image: string): Promise<void> {
           console.error(`Failed to run image: ${error.cause} ${image}`);
           Deno.exit(1);
         })
-      )
-    )
+      ),
+    ),
   );
 }
 
