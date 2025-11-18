@@ -35,7 +35,7 @@ export class ImageNotFoundError extends Data.TaggedError("ImageNotFoundError")<{
 }> {}
 
 export class RemoveRunningVmError extends Data.TaggedError(
-  "RemoveRunningVmError"
+  "RemoveRunningVmError",
 )<{
   id: string;
 }> {}
@@ -49,10 +49,9 @@ app.get("/", (c) =>
       Effect.flatMap((params) =>
         listInstances(params.all === "true" || params.all === "1")
       ),
-      presentation(c)
-    )
-  )
-);
+      presentation(c),
+    ),
+  ));
 
 app.post("/", (c) =>
   Effect.runPromise(
@@ -63,7 +62,7 @@ app.post("/", (c) =>
           const image = yield* getImage(params.image);
           if (!image) {
             return yield* Effect.fail(
-              new ImageNotFoundError({ id: params.image })
+              new ImageNotFoundError({ id: params.image }),
             );
           }
 
@@ -97,20 +96,18 @@ app.post("/", (c) =>
         })
       ),
       presentation(c),
-      Effect.catchAll((error) => handleError(error, c))
-    )
-  )
-);
+      Effect.catchAll((error) => handleError(error, c)),
+    ),
+  ));
 
 app.get("/:id", (c) =>
   Effect.runPromise(
     pipe(
       parseParams(c),
       Effect.flatMap(({ id }) => getInstanceState(id)),
-      presentation(c)
-    )
-  )
-);
+      presentation(c),
+    ),
+  ));
 
 app.delete("/:id", (c) =>
   Effect.runPromise(
@@ -129,10 +126,9 @@ app.delete("/:id", (c) =>
         })
       ),
       presentation(c),
-      Effect.catchAll((error) => handleError(error, c))
-    )
-  )
-);
+      Effect.catchAll((error) => handleError(error, c)),
+    ),
+  ));
 
 app.post("/:id/start", (c) =>
   Effect.runPromise(
@@ -157,7 +153,7 @@ app.post("/:id/start", (c) =>
                 ? startRequest.portForward.join(",")
                 : vm.portForward,
             },
-            firmwareArgs
+            firmwareArgs,
           );
           yield* createLogsDir();
           yield* startDetachedQemu(vm.id, vm, qemuArgs);
@@ -165,10 +161,9 @@ app.post("/:id/start", (c) =>
         })
       ),
       presentation(c),
-      Effect.catchAll((error) => handleError(error, c))
-    )
-  )
-);
+      Effect.catchAll((error) => handleError(error, c)),
+    ),
+  ));
 
 app.post("/:id/stop", (c) =>
   Effect.runPromise(
@@ -178,10 +173,9 @@ app.post("/:id/stop", (c) =>
       Effect.flatMap(killProcess),
       Effect.flatMap(updateToStopped),
       presentation(c),
-      Effect.catchAll((error) => handleError(error, c))
-    )
-  )
-);
+      Effect.catchAll((error) => handleError(error, c)),
+    ),
+  ));
 
 app.post("/:id/restart", (c) =>
   Effect.runPromise(
@@ -208,7 +202,7 @@ app.post("/:id/restart", (c) =>
                 ? startRequest.portForward.join(",")
                 : vm.portForward,
             },
-            firmwareArgs
+            firmwareArgs,
           );
           yield* createLogsDir();
           yield* startDetachedQemu(vm.id, vm, qemuArgs);
@@ -216,9 +210,8 @@ app.post("/:id/restart", (c) =>
         })
       ),
       presentation(c),
-      Effect.catchAll((error) => handleError(error, c))
-    )
-  )
-);
+      Effect.catchAll((error) => handleError(error, c)),
+    ),
+  ));
 
 export default app;
