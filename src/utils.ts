@@ -335,7 +335,7 @@ export const runQemu = (isoPath: string | null, options: Options) =>
     const firmwareFiles = yield* setupFirmwareFilesIfNeeded();
     let coreosArgs: string[] = yield* setupCoreOSArgs(isoPath || options.image);
 
-    if (coreosArgs.length > 0) {
+    if (coreosArgs.length > 0 && !isoPath) {
       coreosArgs = coreosArgs.slice(2);
     }
 
