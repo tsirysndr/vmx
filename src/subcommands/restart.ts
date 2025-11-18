@@ -28,7 +28,7 @@ const findVm = (name: string) =>
     getInstanceState(name),
     Effect.flatMap((vm) =>
       vm ? Effect.succeed(vm) : Effect.fail(new VmNotFoundError({ name }))
-    ),
+    )
   );
 
 const killQemu = (vm: VirtualMachine) =>
@@ -37,7 +37,7 @@ const killQemu = (vm: VirtualMachine) =>
       success
         ? Effect.succeed(vm)
         : Effect.fail(new KillQemuError({ vmName: vm.name }))
-    ),
+    )
   );
 
 const sleep = (ms: number) =>
@@ -55,9 +55,10 @@ const createLogsDir = () =>
 const setupFirmware = () => setupFirmwareFilesIfNeeded();
 
 const buildQemuArgs = (vm: VirtualMachine, firmwareArgs: string[]) => {
-  const qemu = Deno.build.arch === "aarch64"
-    ? "qemu-system-aarch64"
-    : "qemu-system-x86_64";
+  const qemu =
+    Deno.build.arch === "aarch64"
+      ? "qemu-system-aarch64"
+      : "qemu-system-x86_64";
 
   let coreosArgs: string[] = Effect.runSync(setupCoreOSArgs(vm.drivePath));
 
@@ -94,25 +95,24 @@ const buildQemuArgs = (vm: VirtualMachine, firmwareArgs: string[]) => {
       vm.drivePath && [
         "-drive",
         `file=${vm.drivePath},format=${vm.diskFormat},if=virtio`,
-      ],
+      ]
     ),
     ...coreosArgs,
   ]);
 };
 
 const startQemu = (vm: VirtualMachine, qemuArgs: string[]) => {
-  const qemu = Deno.build.arch === "aarch64"
-    ? "qemu-system-aarch64"
-    : "qemu-system-x86_64";
+  const qemu =
+    Deno.build.arch === "aarch64"
+      ? "qemu-system-aarch64"
+      : "qemu-system-x86_64";
 
   const logPath = `${LOGS_DIR}/${vm.name}.log`;
 
   const fullCommand = vm.bridge
-    ? `sudo ${qemu} ${
-      qemuArgs
+    ? `sudo ${qemu} ${qemuArgs
         .slice(1)
-        .join(" ")
-    } >> "${logPath}" 2>&1 & echo $!`
+        .join(" ")} >> "${logPath}" 2>&1 & echo $!`
     : `${qemu} ${qemuArgs.join(" ")} >> "${logPath}" 2>&1 & echo $!`;
 
   return Effect.tryPromise({
@@ -134,30 +134,26 @@ const startQemu = (vm: VirtualMachine, qemuArgs: string[]) => {
 const logSuccess = (vm: VirtualMachine, qemuPid: number, logPath: string) =>
   Effect.sync(() => {
     console.log(
-      `${chalk.greenBright(vm.name)} restarted with PID ${
-        chalk.greenBright(
-          qemuPid,
-        )
-      }.`,
+      `${chalk.greenBright(vm.name)} restarted with PID ${chalk.greenBright(
+        qemuPid
+      )}.`
     );
     console.log(`Logs are being written to ${chalk.blueBright(logPath)}`);
   });
 
 const handleError = (
-  error: VmNotFoundError | KillQemuError | CommandError | Error,
+  error: VmNotFoundError | KillQemuError | CommandError | Error
 ) =>
   Effect.sync(() => {
     if (error instanceof VmNotFoundError) {
       console.error(
-        `Virtual machine with name or ID ${
-          chalk.greenBright(
-            error.name,
-          )
-        } not found.`,
+        `Virtual machine with name or ID ${chalk.greenBright(
+          error.name
+        )} not found.`
       );
     } else if (error instanceof KillQemuError) {
       console.error(
-        `Failed to stop virtual machine ${chalk.greenBright(error.vmName)}.`,
+        `Failed to stop virtual machine ${chalk.greenBright(error.vmName)}.`
       );
     } else {
       console.error(`An error occurred: ${error}`);
@@ -183,12 +179,12 @@ const restartEffect = (name: string) =>
           pipe(
             updateInstanceState(vm.id, "RUNNING", qemuPid),
             Effect.flatMap(() => logSuccess(vm, qemuPid, logPath)),
-            Effect.flatMap(() => sleep(2000)),
+            Effect.flatMap(() => sleep(2000))
           )
-        ),
+        )
       )
     ),
-    Effect.catchAll(handleError),
+    Effect.catchAll(handleError)
   );
 
 export default async function (name: string) {
