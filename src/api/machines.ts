@@ -1,5 +1,25 @@
-import { Hono } from "hono";
+import { createId } from "@paralleldrive/cuid2";
 import { Data, Effect, pipe } from "effect";
+import { Hono } from "hono";
+import Moniker from "moniker";
+import { getImage } from "../images.ts";
+import { DEFAULT_VERSION, getInstanceState } from "../mod.ts";
+import { generateRandomMacAddress } from "../network.ts";
+import {
+  listInstances,
+  removeInstanceState,
+  saveInstanceState,
+} from "../state.ts";
+import {
+  buildQemuArgs,
+  createLogsDir,
+  failIfVMRunning,
+  setupFirmware,
+  startDetachedQemu,
+} from "../subcommands/start.ts";
+import { findVm, killProcess, updateToStopped } from "../subcommands/stop.ts";
+import type { NewMachine } from "../types.ts";
+import { getVolume } from "../volumes.ts";
 import {
   createVolumeIfNeeded,
   handleError,
@@ -9,32 +29,13 @@ import {
   parseStartRequest,
   presentation,
 } from "./utils.ts";
-import { DEFAULT_VERSION, getInstanceState } from "../mod.ts";
-import {
-  listInstances,
-  removeInstanceState,
-  saveInstanceState,
-} from "../state.ts";
-import { findVm, killProcess, updateToStopped } from "../subcommands/stop.ts";
-import {
-  buildQemuArgs,
-  createLogsDir,
-  failIfVMRunning,
-  setupFirmware,
-  startDetachedQemu,
-} from "../subcommands/start.ts";
-import type { NewMachine } from "../types.ts";
-import { createId } from "@paralleldrive/cuid2";
-import { generateRandomMacAddress } from "../network.ts";
-import Moniker from "moniker";
-import { getImage } from "../images.ts";
 
 export class ImageNotFoundError extends Data.TaggedError("ImageNotFoundError")<{
   id: string;
 }> {}
 
 export class RemoveRunningVmError extends Data.TaggedError(
-  "RemoveRunningVmError",
+  "RemoveRunningVmError"
 )<{
   id: string;
 }> {}
@@ -46,13 +47,12 @@ app.get("/", (c) =>
     pipe(
       parseQueryParams(c),
       Effect.flatMap((params) =>
-        listInstances(
-          params.all === "true" || params.all === "1",
-        )
+        listInstances(params.all === "true" || params.all === "1")
       ),
-      presentation(c),
-    ),
-  ));
+      presentation(c)
+    )
+  )
+);
 
 app.post("/", (c) =>
   Effect.runPromise(
@@ -63,7 +63,7 @@ app.post("/", (c) =>
           const image = yield* getImage(params.image);
           if (!image) {
             return yield* Effect.fail(
-              new ImageNotFoundError({ id: params.image }),
+              new ImageNotFoundError({ id: params.image })
             );
           }
 
@@ -97,18 +97,20 @@ app.post("/", (c) =>
         })
       ),
       presentation(c),
-      Effect.catchAll((error) => handleError(error, c)),
-    ),
-  ));
+      Effect.catchAll((error) => handleError(error, c))
+    )
+  )
+);
 
 app.get("/:id", (c) =>
   Effect.runPromise(
     pipe(
       parseParams(c),
       Effect.flatMap(({ id }) => getInstanceState(id)),
-      presentation(c),
-    ),
-  ));
+      presentation(c)
+    )
+  )
+);
 
 app.delete("/:id", (c) =>
   Effect.runPromise(
@@ -127,39 +129,46 @@ app.delete("/:id", (c) =>
         })
       ),
       presentation(c),
-      Effect.catchAll((error) => handleError(error, c)),
-    ),
-  ));
+      Effect.catchAll((error) => handleError(error, c))
+    )
+  )
+);
 
 app.post("/:id/start", (c) =>
   Effect.runPromise(
     pipe(
       Effect.all([parseParams(c), parseStartRequest(c)]),
-      Effect.flatMap((
-        [{ id }, startRequest],
-      ) => Effect.all([findVm(id), Effect.succeed(startRequest)])),
+      Effect.flatMap(([{ id }, startRequest]) =>
+        Effect.all([findVm(id), Effect.succeed(startRequest)])
+      ),
       Effect.flatMap(([vm, startRequest]) =>
         Effect.gen(function* () {
           yield* failIfVMRunning(vm);
+          const volume = yield* getVolume(vm.drivePath || "");
           const firmwareArgs = yield* setupFirmware();
-          const qemuArgs = yield* buildQemuArgs({
-            ...vm,
-            cpu: String(startRequest.cpu ?? vm.cpu),
-            cpus: startRequest.cpus ?? vm.cpus,
-            memory: startRequest.memory ?? vm.memory,
-            portForward: startRequest.portForward
-              ? startRequest.portForward.join(",")
-              : vm.portForward,
-          }, firmwareArgs);
+          vm.volume = volume ? volume.path : undefined;
+          const qemuArgs = yield* buildQemuArgs(
+            {
+              ...vm,
+              cpu: String(startRequest.cpu ?? vm.cpu),
+              cpus: startRequest.cpus ?? vm.cpus,
+              memory: startRequest.memory ?? vm.memory,
+              portForward: startRequest.portForward
+                ? startRequest.portForward.join(",")
+                : vm.portForward,
+            },
+            firmwareArgs
+          );
           yield* createLogsDir();
           yield* startDetachedQemu(vm.id, vm, qemuArgs);
           return { ...vm, status: "RUNNING" };
         })
       ),
       presentation(c),
-      Effect.catchAll((error) => handleError(error, c)),
-    ),
-  ));
+      Effect.catchAll((error) => handleError(error, c))
+    )
+  )
+);
 
 app.post("/:id/stop", (c) =>
   Effect.runPromise(
@@ -169,9 +178,10 @@ app.post("/:id/stop", (c) =>
       Effect.flatMap(killProcess),
       Effect.flatMap(updateToStopped),
       presentation(c),
-      Effect.catchAll((error) => handleError(error, c)),
-    ),
-  ));
+      Effect.catchAll((error) => handleError(error, c))
+    )
+  )
+);
 
 app.post("/:id/restart", (c) =>
   Effect.runPromise(
@@ -181,28 +191,34 @@ app.post("/:id/restart", (c) =>
       Effect.flatMap(killProcess),
       Effect.flatMap(updateToStopped),
       Effect.flatMap(() => Effect.all([parseParams(c), parseStartRequest(c)])),
-      Effect.flatMap((
-        [{ id }, startRequest],
-      ) => Effect.all([findVm(id), Effect.succeed(startRequest)])),
+      Effect.flatMap(([{ id }, startRequest]) =>
+        Effect.all([findVm(id), Effect.succeed(startRequest)])
+      ),
       Effect.flatMap(([vm, startRequest]) =>
         Effect.gen(function* () {
           const firmwareArgs = yield* setupFirmware();
-          const qemuArgs = yield* buildQemuArgs({
-            ...vm,
-            cpu: String(startRequest.cpus ?? vm.cpu),
-            memory: startRequest.memory ?? vm.memory,
-            portForward: startRequest.portForward
-              ? startRequest.portForward.join(",")
-              : vm.portForward,
-          }, firmwareArgs);
+          const volume = yield* getVolume(vm.drivePath || "");
+          vm.volume = volume ? volume.path : undefined;
+          const qemuArgs = yield* buildQemuArgs(
+            {
+              ...vm,
+              cpu: String(startRequest.cpus ?? vm.cpu),
+              memory: startRequest.memory ?? vm.memory,
+              portForward: startRequest.portForward
+                ? startRequest.portForward.join(",")
+                : vm.portForward,
+            },
+            firmwareArgs
+          );
           yield* createLogsDir();
           yield* startDetachedQemu(vm.id, vm, qemuArgs);
           return { ...vm, status: "RUNNING" };
         })
       ),
       presentation(c),
-      Effect.catchAll((error) => handleError(error, c)),
-    ),
-  ));
+      Effect.catchAll((error) => handleError(error, c))
+    )
+  )
+);
 
 export default app;
