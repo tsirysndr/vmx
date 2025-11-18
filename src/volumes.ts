@@ -19,7 +19,7 @@ export const listVolumes = () =>
   });
 
 export const getVolume = (
-  id: string,
+  id: string
 ): Effect.Effect<Volume | undefined, VolumeError, never> =>
   Effect.tryPromise({
     try: () =>
@@ -27,11 +27,7 @@ export const getVolume = (
         .selectFrom("volumes")
         .selectAll()
         .where((eb) =>
-          eb.or([
-            eb("name", "=", id),
-            eb("id", "=", id),
-            eb("path", "=", id),
-          ])
+          eb.or([eb("name", "=", id), eb("id", "=", id), eb("path", "=", id)])
         )
         .executeTakeFirst(),
     catch: (error) =>
@@ -41,13 +37,10 @@ export const getVolume = (
   });
 
 export const saveVolume = (
-  volume: Volume,
+  volume: Volume
 ): Effect.Effect<InsertResult[], VolumeError, never> =>
   Effect.tryPromise({
-    try: () =>
-      ctx.db.insertInto("volumes")
-        .values(volume)
-        .execute(),
+    try: () => ctx.db.insertInto("volumes").values(volume).execute(),
     catch: (error) =>
       new VolumeError({
         message: error instanceof Error ? error.message : String(error),
@@ -55,16 +48,14 @@ export const saveVolume = (
   });
 
 export const deleteVolume = (
-  id: string,
+  id: string
 ): Effect.Effect<DeleteResult[], VolumeError, never> =>
   Effect.tryPromise({
     try: () =>
-      ctx.db.deleteFrom("volumes").where((eb) =>
-        eb.or([
-          eb("name", "=", id),
-          eb("id", "=", id),
-        ])
-      ).execute(),
+      ctx.db
+        .deleteFrom("volumes")
+        .where((eb) => eb.or([eb("name", "=", id), eb("id", "=", id)]))
+        .execute(),
     catch: (error) =>
       new VolumeError({
         message: error instanceof Error ? error.message : String(error),
@@ -74,7 +65,7 @@ export const deleteVolume = (
 export const createVolume = (
   name: string,
   baseImage: Image,
-  size?: string,
+  size?: string
 ): Effect.Effect<Volume, VolumeError, never> =>
   Effect.tryPromise({
     try: async () => {
@@ -86,7 +77,7 @@ export const createVolume = (
           args: [
             "create",
             "-F",
-            "raw",
+            baseImage.path.endsWith(".qcow2") ? "qcow2" : "raw",
             "-f",
             "qcow2",
             "-b",
@@ -96,22 +87,24 @@ export const createVolume = (
           ],
           stdout: "inherit",
           stderr: "inherit",
-        })
-          .spawn();
+        }).spawn();
         const status = await qemu.status;
         if (!status.success) {
           throw new Error(
-            `Failed to create volume: qemu-img exited with code ${status.code}`,
+            `Failed to create volume: qemu-img exited with code ${status.code}`
           );
         }
       }
 
-      ctx.db.insertInto("volumes").values({
-        id: createId(),
-        name,
-        path,
-        baseImageId: baseImage.id,
-      }).execute();
+      ctx.db
+        .insertInto("volumes")
+        .values({
+          id: createId(),
+          name,
+          path,
+          baseImageId: baseImage.id,
+        })
+        .execute();
       const volume = await ctx.db
         .selectFrom("volumes")
         .selectAll()

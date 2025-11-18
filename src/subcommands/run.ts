@@ -7,9 +7,7 @@ import { pullImage, PullImageError, setupOrasBinary } from "../oras.ts";
 import { type Options, runQemu, validateImage } from "../utils.ts";
 import { createVolume, getVolume } from "../volumes.ts";
 
-const pullImageOnMissing = (
-  name: string,
-): Effect.Effect<Image, Error, never> =>
+const pullImageOnMissing = (name: string): Effect.Effect<Image, Error, never> =>
   pipe(
     getImage(name),
     Effect.flatMap((img) => {
@@ -21,27 +19,27 @@ const pullImageOnMissing = (
         pullImage(name),
         Effect.flatMap(() => getImage(name)),
         Effect.flatMap((pulledImg) =>
-          pulledImg ? Effect.succeed(pulledImg) : Effect.fail(
-            new PullImageError({ cause: "Failed to pull image" }),
-          )
-        ),
+          pulledImg
+            ? Effect.succeed(pulledImg)
+            : Effect.fail(new PullImageError({ cause: "Failed to pull image" }))
+        )
       );
-    }),
+    })
   );
 
 const createVolumeIfNeeded = (
-  image: Image,
+  image: Image
 ): Effect.Effect<[Image, Volume?], Error, never> =>
   parseFlags(Deno.args).flags.volume
     ? Effect.gen(function* () {
-      const volumeName = parseFlags(Deno.args).flags.volume as string;
-      const volume = yield* getVolume(volumeName);
-      if (volume) {
-        return [image, volume];
-      }
-      const newVolume = yield* createVolume(volumeName, image);
-      return [image, newVolume];
-    })
+        const volumeName = parseFlags(Deno.args).flags.volume as string;
+        const volume = yield* getVolume(volumeName);
+        if (volume) {
+          return [image, volume];
+        }
+        const newVolume = yield* createVolume(volumeName, image);
+        return [image, newVolume];
+      })
     : Effect.succeed([image]);
 
 const runImage = ([image, volume]: [Image, Volume?]) =>
@@ -56,14 +54,13 @@ const runImage = ([image, volume]: [Image, Volume?]) =>
       options.image = volume.path;
       options.install = true;
       options.diskFormat = "qcow2";
+      options.volume = undefined;
     }
 
     yield* runQemu(null, options);
   });
 
-export default async function (
-  image: string,
-): Promise<void> {
+export default async function (image: string): Promise<void> {
   await Effect.runPromise(
     pipe(
       Effect.promise(() => setupOrasBinary()),
@@ -76,17 +73,17 @@ export default async function (
           console.error(`Failed to run image: ${error.cause} ${image}`);
           Deno.exit(1);
         })
-      ),
-    ),
+      )
+    )
   );
 }
 
 function mergeFlags(image: Image): Options {
   const { flags } = parseFlags(Deno.args);
   return {
-    cpu: (flags.cpu || flags.c) ? (flags.cpu || flags.c) : "host",
-    cpus: (flags.cpus || flags.C) ? (flags.cpus || flags.C) : 2,
-    memory: (flags.memory || flags.m) ? (flags.memory || flags.m) : "2G",
+    cpu: flags.cpu || flags.c ? flags.cpu || flags.c : "host",
+    cpus: flags.cpus || flags.C ? flags.cpus || flags.C : 2,
+    memory: flags.memory || flags.m ? flags.memory || flags.m : "2G",
     image: image.path,
     bridge: flags.bridge || flags.b,
     portForward: flags.portForward || flags.p,

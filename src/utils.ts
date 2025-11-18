@@ -333,9 +333,11 @@ export const runQemu = (isoPath: string | null, options: Options) =>
         : "qemu-system-x86_64";
 
     const firmwareFiles = yield* setupFirmwareFilesIfNeeded();
-    const coreosArgs: string[] = yield* setupCoreOSArgs(
-      isoPath || options.image
-    );
+    let coreosArgs: string[] = yield* setupCoreOSArgs(isoPath || options.image);
+
+    if (coreosArgs.length > 0) {
+      coreosArgs = coreosArgs.slice(2);
+    }
 
     const qemuArgs = [
       ..._.compact([options.bridge && qemu]),
