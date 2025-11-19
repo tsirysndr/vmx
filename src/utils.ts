@@ -9,6 +9,7 @@ import {
   FEDORA_COREOS_DEFAULT_VERSION,
   FEDORA_COREOS_IMG_URL,
   FEDORA_IMG_URL,
+  GENTOO_IMG_URL,
   LOGS_DIR,
   NIXOS_DEFAULT_VERSION,
   NIXOS_ISO_URL,
@@ -339,6 +340,21 @@ export const setupFedoraArgs = (imagePath?: string | null) =>
     return [];
   });
 
+export const setupGentooArgs = (imagePath?: string | null) =>
+  Effect.sync(() => {
+    if (
+      imagePath &&
+      imagePath.endsWith(".qcow2") &&
+      imagePath.startsWith(
+        `di-${Deno.build.arch === "aarch64" ? "arm64" : "amd64"}-console-`,
+      )
+    ) {
+      return ["-drive", `file=${imagePath},format=qcow2,if=virtio`];
+    }
+
+    return [];
+  });
+
 export const runQemu = (isoPath: string | null, options: Options) =>
   Effect.gen(function* () {
     const macAddress = yield* generateRandomMacAddress();
@@ -350,6 +366,7 @@ export const runQemu = (isoPath: string | null, options: Options) =>
     const firmwareFiles = yield* setupFirmwareFilesIfNeeded();
     let coreosArgs: string[] = yield* setupCoreOSArgs(isoPath || options.image);
     let fedoraArgs: string[] = yield* setupFedoraArgs(isoPath || options.image);
+    let gentooArgs: string[] = yield* setupGentooArgs(isoPath || options.image);
 
     if (coreosArgs.length > 0 && !isoPath) {
       coreosArgs = coreosArgs.slice(2);
@@ -357,6 +374,10 @@ export const runQemu = (isoPath: string | null, options: Options) =>
 
     if (fedoraArgs.length > 0 && !isoPath) {
       fedoraArgs = [];
+    }
+
+    if (gentooArgs.length > 0 && !isoPath) {
+      gentooArgs = [];
     }
 
     const qemuArgs = [
@@ -387,6 +408,7 @@ export const runQemu = (isoPath: string | null, options: Options) =>
       ...firmwareFiles,
       ...coreosArgs,
       ...fedoraArgs,
+      ...gentooArgs,
       ..._.compact(
         options.image && [
           "-drive",
@@ -701,6 +723,33 @@ export const constructFedoraImageURL = (
     new InvalidImageNameError({
       image,
       cause: "Image name does not match Fedora naming conventions.",
+    }),
+  );
+};
+
+export const constructGentooImageURL = (
+  image: string,
+): Effect.Effect<string, InvalidImageNameError, never> => {
+  // detect with regex if image matches genroo pattern: gentoo-20251116T161545Z or gentoo
+  const gentooRegex = /^(gentoo)(-(\d{8}T\d{6}Z))?$/;
+  const match = image.match(gentooRegex);
+  if (match?.[3]) {
+    return Effect.succeed(
+      GENTOO_IMG_URL.replaceAll("20251116T161545Z", match[3]).replaceAll(
+        "20251116T233105Z",
+        match[3],
+      ),
+    );
+  }
+
+  if (match) {
+    return Effect.succeed(GENTOO_IMG_URL);
+  }
+
+  return Effect.fail(
+    new InvalidImageNameError({
+      image,
+      cause: "Image name does not match Gentoo naming conventions.",
     }),
   );
 };

@@ -1,7 +1,15 @@
 import { assertEquals } from "@std/assert";
 import { Effect, pipe } from "effect";
-import { FEDORA_COREOS_IMG_URL, NIXOS_ISO_URL } from "./constants.ts";
-import { constructCoreOSImageURL, constructNixOSImageURL } from "./utils.ts";
+import {
+  FEDORA_COREOS_IMG_URL,
+  GENTOO_IMG_URL,
+  NIXOS_ISO_URL,
+} from "./constants.ts";
+import {
+  constructCoreOSImageURL,
+  constructGentooImageURL,
+  constructNixOSImageURL,
+} from "./utils.ts";
 
 Deno.test("Test Default Fedora CoreOS Image URL", () => {
   const url = Effect.runSync(
@@ -80,6 +88,43 @@ Deno.test("Test invalid NixOS Image Name", () => {
   const url = Effect.runSync(
     pipe(
       constructNixOSImageURL("nixos-latest"),
+      Effect.catchAll((_error) => Effect.succeed(null as string | null)),
+    ),
+  );
+
+  assertEquals(url, null);
+});
+
+Deno.test("Test valid Gentoo Image Name", () => {
+  const url = Effect.runSync(
+    pipe(
+      constructGentooImageURL("gentoo-20251116T161545Z"),
+      Effect.catchAll((_error) => Effect.succeed(null as string | null)),
+    ),
+  );
+
+  const arch = Deno.build.arch === "aarch64" ? "arm64" : "amd64";
+  assertEquals(
+    url,
+    `https://distfiles.gentoo.org/releases/${arch}/autobuilds/20251116T161545Z/di-${arch}-console-20251116T161545Z.qcow2`,
+  );
+});
+
+Deno.test("Test valid Gentoo Image Name", () => {
+  const url = Effect.runSync(
+    pipe(
+      constructGentooImageURL("gentoo"),
+      Effect.catchAll((_error) => Effect.succeed(null as string | null)),
+    ),
+  );
+
+  assertEquals(url, GENTOO_IMG_URL);
+});
+
+Deno.test("Test invalid Gentoo Image Name", () => {
+  const url = Effect.runSync(
+    pipe(
+      constructGentooImageURL("gentoo-latest"),
       Effect.catchAll((_error) => Effect.succeed(null as string | null)),
     ),
   );

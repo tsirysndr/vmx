@@ -32,6 +32,7 @@ import tag from "./src/subcommands/tag.ts";
 import * as volumes from "./src/subcommands/volume.ts";
 import {
   constructFedoraImageURL,
+  constructGentooImageURL,
   constructNixOSImageURL,
   createDriveImageIfNeeded,
   downloadIso,
@@ -225,6 +226,25 @@ if (import.meta.main) {
               isoPath = yield* downloadIso(fedoraImageURL, options);
             } else {
               isoPath = basename(fedoraImageURL);
+            }
+          }
+
+          const gentooImageURL = yield* pipe(
+            constructGentooImageURL(input),
+            Effect.catchAll(() => Effect.succeed(null)),
+          );
+
+          if (gentooImageURL) {
+            const cached = yield* pipe(
+              basename(gentooImageURL),
+              fileExists,
+              Effect.flatMap(() => Effect.succeed(true)),
+              Effect.catchAll(() => Effect.succeed(false)),
+            );
+            if (!cached) {
+              isoPath = yield* downloadIso(gentooImageURL, options);
+            } else {
+              isoPath = basename(gentooImageURL);
             }
           }
         }
