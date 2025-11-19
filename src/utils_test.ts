@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { Effect, pipe } from "effect";
 import {
+  DEBIAN_ISO_URL,
   FEDORA_COREOS_IMG_URL,
   GENTOO_IMG_URL,
   NIXOS_ISO_URL,
@@ -157,10 +158,7 @@ Deno.test("Test valid Debian Image Name", () => {
   );
 
   const arch = Deno.build.arch === "aarch64" ? "arm64" : "amd64";
-  assertEquals(
-    url,
-    `https://cdimage.debian.org/debian-cd/current/${arch}/iso-cd/debian-13.2.0-${arch}-netinst.iso`,
-  );
+  assertEquals(url, DEBIAN_ISO_URL);
 });
 
 Deno.test("Test invalid Debian Image Name", () => {
