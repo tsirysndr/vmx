@@ -9,6 +9,8 @@ import {
   FEDORA_COREOS_DEFAULT_VERSION,
   FEDORA_COREOS_IMG_URL,
   LOGS_DIR,
+  NIXOS_DEFAULT_VERSION,
+  NIXOS_ISO_URL,
 } from "./constants.ts";
 import type { Image } from "./db.ts";
 import { generateRandomMacAddress } from "./network.ts";
@@ -643,3 +645,24 @@ export const extractXz = (path: string | null) =>
     },
     catch: (error) => new LogCommandError({ cause: error }),
   });
+
+export const constructNixOSImageURL = (
+  image: string,
+): Effect.Effect<string, InvalidImageNameError, never> => {
+  // detect with regex if image matches NixOS pattern: nixos or nixos-<version>
+  const nixosRegex = /^(nixos)(-(\d+\.\d+))?$/;
+  const match = image.match(nixosRegex);
+  if (match) {
+    const version = match[3] || NIXOS_DEFAULT_VERSION;
+    return Effect.succeed(
+      NIXOS_ISO_URL.replaceAll(NIXOS_DEFAULT_VERSION, version),
+    );
+  }
+
+  return Effect.fail(
+    new InvalidImageNameError({
+      image,
+      cause: "Image name does not match NixOS naming conventions.",
+    }),
+  );
+};

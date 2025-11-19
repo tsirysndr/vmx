@@ -31,6 +31,7 @@ import stop from "./src/subcommands/stop.ts";
 import tag from "./src/subcommands/tag.ts";
 import * as volumes from "./src/subcommands/volume.ts";
 import {
+  constructNixOSImageURL,
   createDriveImageIfNeeded,
   downloadIso,
   emptyDiskImage,
@@ -186,6 +187,15 @@ if (import.meta.main) {
             } else {
               isoPath = basename(coreOSImageURL).replace(".xz", "");
             }
+          }
+
+          const nixOSIsoURL = yield* pipe(
+            constructNixOSImageURL(input),
+            Effect.catchAll(() => Effect.succeed(null)),
+          );
+
+          if (nixOSIsoURL) {
+            isoPath = yield* downloadIso(nixOSIsoURL, options);
           }
         }
 
