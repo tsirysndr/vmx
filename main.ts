@@ -31,6 +31,7 @@ import stop from "./src/subcommands/stop.ts";
 import tag from "./src/subcommands/tag.ts";
 import * as volumes from "./src/subcommands/volume.ts";
 import {
+  constructAlpineImageURL,
   constructDebianImageURL,
   constructFedoraImageURL,
   constructGentooImageURL,
@@ -265,6 +266,25 @@ if (import.meta.main) {
               isoPath = yield* downloadIso(debianImageURL, options);
             } else {
               isoPath = basename(debianImageURL);
+            }
+          }
+
+          const alpineImageURL = yield* pipe(
+            constructAlpineImageURL(input),
+            Effect.catchAll(() => Effect.succeed(null)),
+          );
+
+          if (alpineImageURL) {
+            const cached = yield* pipe(
+              basename(alpineImageURL),
+              fileExists,
+              Effect.flatMap(() => Effect.succeed(true)),
+              Effect.catchAll(() => Effect.succeed(false)),
+            );
+            if (!cached) {
+              isoPath = yield* downloadIso(alpineImageURL, options);
+            } else {
+              isoPath = basename(alpineImageURL);
             }
           }
         }
@@ -517,6 +537,10 @@ if (import.meta.main) {
     .option(
       "-v, --volume <name:string>",
       "Name of the volume to attach to the VM, will be created if it doesn't exist",
+    )
+    .option(
+      "-s, --size <size:string>",
+      "Size of the volume to create if it doesn't exist (e.g., 20G)",
     )
     .action(async (_options: unknown, image: string) => {
       await run(image);

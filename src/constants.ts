@@ -30,3 +30,21 @@ export const DEBIAN_DEFAULT_VERSION: string = "13.2.0";
 export const DEBIAN_ISO_URL: string = Deno.build.arch === "aarch64"
   ? `https://cdimage.debian.org/debian-cd/current/arm64/iso-cd/debian-${DEBIAN_DEFAULT_VERSION}-arm64-netinst.iso`
   : `https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-${DEBIAN_DEFAULT_VERSION}-amd64-netinst.iso`;
+
+export const ALPINE_DEFAULT_VERSION: string = "3.22.2";
+
+export const ALPINE_ISO_URL: string = Deno.build.arch === "aarch64"
+  ? `https://dl-cdn.alpinelinux.org/alpine/v${
+    ALPINE_DEFAULT_VERSION.split(
+      ".",
+    )
+      .slice(0, 2)
+      .join(".")
+  }/releases/cloud/generic_alpine-${ALPINE_DEFAULT_VERSION}-${Deno.build.arch}-uefi-tiny-r0.qcow2`
+  : `https://dl-cdn.alpinelinux.org/alpine/v${
+    ALPINE_DEFAULT_VERSION.split(
+      ".",
+    )
+      .slice(0, 2)
+      .join(".")
+  }/releases/cloud/generic_alpine-${ALPINE_DEFAULT_VERSION}-${Deno.build.arch}-uefi-tiny-r0.qcow2`;
