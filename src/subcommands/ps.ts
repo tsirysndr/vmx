@@ -1,4 +1,5 @@
 import { Table } from "@cliffy/table";
+import { basename } from "@std/path";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import utc from "dayjs/plugin/utc.js";
@@ -16,7 +17,8 @@ class DbQueryError extends Data.TaggedError("DbQueryError")<{
 const fetchVMs = (all: boolean) =>
   Effect.tryPromise({
     try: () =>
-      ctx.db.selectFrom("virtual_machines")
+      ctx.db
+        .selectFrom("virtual_machines")
         .selectAll()
         .where((eb) => {
           if (all) {
@@ -30,9 +32,17 @@ const fetchVMs = (all: boolean) =>
 
 const createTable = () =>
   Effect.succeed(
-    new Table(
-      ["NAME", "VCPU", "MEMORY", "STATUS", "PID", "BRIDGE", "PORTS", "CREATED"],
-    ),
+    new Table([
+      "NAME",
+      "VCPU",
+      "MEMORY",
+      "STATUS",
+      "PID",
+      "IMAGE",
+      "BRIDGE",
+      "PORTS",
+      "CREATED",
+    ]),
   );
 
 const populateTable = (table: Table, vms: VirtualMachine[]) =>
@@ -44,6 +54,7 @@ const populateTable = (table: Table, vms: VirtualMachine[]) =>
         vm.memory,
         formatStatus(vm),
         vm.pid?.toString() ?? "-",
+        basename(vm.drivePath || vm.isoPath || "-"),
         vm.bridge ?? "-",
         formatPorts(vm.portForward),
         dayjs.utc(vm.createdAt).local().fromNow(),
@@ -79,7 +90,11 @@ function formatStatus(vm: VirtualMachine) {
   switch (vm.status) {
     case "RUNNING":
       return `Up ${
-        dayjs.utc(vm.updatedAt).local().fromNow().replace("ago", "")
+        dayjs
+          .utc(vm.updatedAt)
+          .local()
+          .fromNow()
+          .replace("ago", "")
       }`;
     case "STOPPED":
       return `Exited ${dayjs.utc(vm.updatedAt).local().fromNow()}`;
@@ -94,8 +109,10 @@ function formatPorts(portForward?: string) {
   }
 
   const mappings = portForward.split(",");
-  return mappings.map((mapping) => {
-    const [hostPort, guestPort] = mapping.split(":");
-    return `${hostPort}->${guestPort}`;
-  }).join(", ");
+  return mappings
+    .map((mapping) => {
+      const [hostPort, guestPort] = mapping.split(":");
+      return `${hostPort}->${guestPort}`;
+    })
+    .join(", ");
 }
