@@ -1,0 +1,15 @@
+when:
+  - event: ["push", "pull_request"]
+    branch: ["main"]
+
+dependencies:
+  nixpkgs:
+    - deno
+
+steps:
+  - name: "deno fmt"
+    command: |
+      deno fmt --check
+  - name: "deno test"
+    command: |
+      deno test -A
