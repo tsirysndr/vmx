@@ -17,3 +17,6 @@ export const FEDORA_COREOS_IMG_URL: string =
 export const NIXOS_DEFAULT_VERSION: string = "25.05";
 export const NIXOS_ISO_URL: string =
   `https://channels.nixos.org/nixos-${NIXOS_DEFAULT_VERSION}/latest-nixos-minimal-${Deno.build.arch}-linux.iso`;
+
+export const FEDORA_IMG_URL: string =
+  `https://download.fedoraproject.org/pub/fedora/linux/releases/43/Server/${Deno.build.arch}/images/Fedora-Server-Guest-Generic-43-1.6.${Deno.build.arch}.qcow2`;

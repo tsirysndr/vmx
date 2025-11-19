@@ -31,6 +31,7 @@ import stop from "./src/subcommands/stop.ts";
 import tag from "./src/subcommands/tag.ts";
 import * as volumes from "./src/subcommands/volume.ts";
 import {
+  constructFedoraImageURL,
   constructNixOSImageURL,
   createDriveImageIfNeeded,
   downloadIso,
@@ -195,7 +196,36 @@ if (import.meta.main) {
           );
 
           if (nixOSIsoURL) {
-            isoPath = yield* downloadIso(nixOSIsoURL, options);
+            const cached = yield* pipe(
+              basename(nixOSIsoURL),
+              fileExists,
+              Effect.flatMap(() => Effect.succeed(true)),
+              Effect.catchAll(() => Effect.succeed(false)),
+            );
+            if (!cached) {
+              isoPath = yield* downloadIso(nixOSIsoURL, options);
+            } else {
+              isoPath = basename(nixOSIsoURL);
+            }
+          }
+
+          const fedoraImageURL = yield* pipe(
+            constructFedoraImageURL(input),
+            Effect.catchAll(() => Effect.succeed(null)),
+          );
+
+          if (fedoraImageURL) {
+            const cached = yield* pipe(
+              basename(fedoraImageURL),
+              fileExists,
+              Effect.flatMap(() => Effect.succeed(true)),
+              Effect.catchAll(() => Effect.succeed(false)),
+            );
+            if (!cached) {
+              isoPath = yield* downloadIso(fedoraImageURL, options);
+            } else {
+              isoPath = basename(fedoraImageURL);
+            }
           }
         }
 

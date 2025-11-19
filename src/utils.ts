@@ -8,6 +8,7 @@ import {
   EMPTY_DISK_THRESHOLD_KB,
   FEDORA_COREOS_DEFAULT_VERSION,
   FEDORA_COREOS_IMG_URL,
+  FEDORA_IMG_URL,
   LOGS_DIR,
   NIXOS_DEFAULT_VERSION,
   NIXOS_ISO_URL,
@@ -325,6 +326,19 @@ export const setupCoreOSArgs = (imagePath?: string | null) =>
     return [];
   });
 
+export const setupFedoraArgs = (imagePath?: string | null) =>
+  Effect.sync(() => {
+    if (
+      imagePath &&
+      imagePath.endsWith(".qcow2") &&
+      imagePath.includes("Fedora-Server")
+    ) {
+      return ["-drive", `file=${imagePath},format=qcow2,if=virtio`];
+    }
+
+    return [];
+  });
+
 export const runQemu = (isoPath: string | null, options: Options) =>
   Effect.gen(function* () {
     const macAddress = yield* generateRandomMacAddress();
@@ -335,9 +349,14 @@ export const runQemu = (isoPath: string | null, options: Options) =>
 
     const firmwareFiles = yield* setupFirmwareFilesIfNeeded();
     let coreosArgs: string[] = yield* setupCoreOSArgs(isoPath || options.image);
+    let fedoraArgs: string[] = yield* setupFedoraArgs(isoPath || options.image);
 
     if (coreosArgs.length > 0 && !isoPath) {
       coreosArgs = coreosArgs.slice(2);
+    }
+
+    if (fedoraArgs.length > 0 && !isoPath) {
+      fedoraArgs = [];
     }
 
     const qemuArgs = [
@@ -367,6 +386,7 @@ export const runQemu = (isoPath: string | null, options: Options) =>
       "chardev:con0",
       ...firmwareFiles,
       ...coreosArgs,
+      ...fedoraArgs,
       ..._.compact(
         options.image && [
           "-drive",
@@ -663,6 +683,24 @@ export const constructNixOSImageURL = (
     new InvalidImageNameError({
       image,
       cause: "Image name does not match NixOS naming conventions.",
+    }),
+  );
+};
+
+export const constructFedoraImageURL = (
+  image: string,
+): Effect.Effect<string, InvalidImageNameError, never> => {
+  // detect with regex if image matches Fedora pattern: fedora
+  const fedoraRegex = /^(fedora)$/;
+  const match = image.match(fedoraRegex);
+  if (match) {
+    return Effect.succeed(FEDORA_IMG_URL);
+  }
+
+  return Effect.fail(
+    new InvalidImageNameError({
+      image,
+      cause: "Image name does not match Fedora naming conventions.",
     }),
   );
 };
