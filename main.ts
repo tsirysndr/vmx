@@ -31,6 +31,7 @@ import stop from "./src/subcommands/stop.ts";
 import tag from "./src/subcommands/tag.ts";
 import * as volumes from "./src/subcommands/volume.ts";
 import {
+  constructDebianImageURL,
   constructFedoraImageURL,
   constructGentooImageURL,
   constructNixOSImageURL,
@@ -245,6 +246,25 @@ if (import.meta.main) {
               isoPath = yield* downloadIso(gentooImageURL, options);
             } else {
               isoPath = basename(gentooImageURL);
+            }
+          }
+
+          const debianImageURL = yield* pipe(
+            constructDebianImageURL(input),
+            Effect.catchAll(() => Effect.succeed(null)),
+          );
+
+          if (debianImageURL) {
+            const cached = yield* pipe(
+              basename(debianImageURL),
+              fileExists,
+              Effect.flatMap(() => Effect.succeed(true)),
+              Effect.catchAll(() => Effect.succeed(false)),
+            );
+            if (!cached) {
+              isoPath = yield* downloadIso(debianImageURL, options);
+            } else {
+              isoPath = basename(debianImageURL);
             }
           }
         }
