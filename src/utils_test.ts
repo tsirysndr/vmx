@@ -1,12 +1,14 @@
 import { assertEquals } from "@std/assert";
 import { Effect, pipe } from "effect";
 import {
+  ALPINE_ISO_URL,
   DEBIAN_ISO_URL,
   FEDORA_COREOS_IMG_URL,
   GENTOO_IMG_URL,
   NIXOS_ISO_URL,
 } from "./constants.ts";
 import {
+  constructAlpineImageURL,
   constructCoreOSImageURL,
   constructDebianImageURL,
   constructGentooImageURL,
@@ -165,6 +167,42 @@ Deno.test("Test invalid Debian Image Name", () => {
   const url = Effect.runSync(
     pipe(
       constructDebianImageURL("debian-latest"),
+      Effect.catchAll((_error) => Effect.succeed(null as string | null)),
+    ),
+  );
+
+  assertEquals(url, null);
+});
+
+Deno.test("Test valid Alpine Image Name", () => {
+  const url = Effect.runSync(
+    pipe(
+      constructAlpineImageURL("alpine-3.22.2"),
+      Effect.catchAll((_error) => Effect.succeed(null as string | null)),
+    ),
+  );
+
+  assertEquals(
+    url,
+    `https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/generic_alpine-3.22.2-${Deno.build.arch}-uefi-tiny-r0.qcow2`,
+  );
+});
+
+Deno.test("Test valid Alpine Image Name", () => {
+  const url = Effect.runSync(
+    pipe(
+      constructAlpineImageURL("alpine"),
+      Effect.catchAll((_error) => Effect.succeed(null as string | null)),
+    ),
+  );
+
+  assertEquals(url, ALPINE_ISO_URL);
+});
+
+Deno.test("Test invalid Alpine Image Name", () => {
+  const url = Effect.runSync(
+    pipe(
+      constructAlpineImageURL("alpine-latest"),
       Effect.catchAll((_error) => Effect.succeed(null as string | null)),
     ),
   );
