@@ -6,15 +6,17 @@ export const CONFIG_FILE_NAME: string = "vmconfig.toml";
 export const IMAGE_DIR: string = `${CONFIG_DIR}/images`;
 export const VOLUME_DIR: string = `${CONFIG_DIR}/volumes`;
 
-export const UBUNTU_ISO_URL: string =
-  Deno.build.arch === "aarch64"
-    ? "https://cdimage.ubuntu.com/releases/24.04/release/ubuntu-24.04.3-live-server-arm64.iso"
-    : "https://releases.ubuntu.com/24.04.3/ubuntu-24.04.3-live-server-amd64.iso";
+export const UBUNTU_ISO_URL: string = Deno.build.arch === "aarch64"
+  ? "https://cdimage.ubuntu.com/releases/24.04/release/ubuntu-24.04.3-live-server-arm64.iso"
+  : "https://releases.ubuntu.com/24.04.3/ubuntu-24.04.3-live-server-amd64.iso";
 
 export const FEDORA_COREOS_DEFAULT_VERSION: string = "43.20251024.3.0";
-export const FEDORA_COREOS_IMG_URL: string = `https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/${FEDORA_COREOS_DEFAULT_VERSION}/${Deno.build.arch}/fedora-coreos-${FEDORA_COREOS_DEFAULT_VERSION}-qemu.${Deno.build.arch}.qcow2.xz`;
+export const FEDORA_COREOS_IMG_URL: string =
+  `https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/${FEDORA_COREOS_DEFAULT_VERSION}/${Deno.build.arch}/fedora-coreos-${FEDORA_COREOS_DEFAULT_VERSION}-qemu.${Deno.build.arch}.qcow2.xz`;
 
 export const NIXOS_DEFAULT_VERSION: string = "25.05";
-export const NIXOS_ISO_URL: string = `https://channels.nixos.org/nixos-${NIXOS_DEFAULT_VERSION}/latest-nixos-minimal-${Deno.build.arch}-linux.iso`;
+export const NIXOS_ISO_URL: string =
+  `https://channels.nixos.org/nixos-${NIXOS_DEFAULT_VERSION}/latest-nixos-minimal-${Deno.build.arch}-linux.iso`;
 
-export const FEDORA_IMG_URL: string = `https://download.fedoraproject.org/pub/fedora/linux/releases/43/Server/${Deno.build.arch}/images/Fedora-Server-Guest-Generic-43-1.6.${Deno.build.arch}.qcow2`;
+export const FEDORA_IMG_URL: string =
+  `https://download.fedoraproject.org/pub/fedora/linux/releases/43/Server/${Deno.build.arch}/images/Fedora-Server-Guest-Generic-43-1.6.${Deno.build.arch}.qcow2`;
