@@ -290,7 +290,7 @@ export function setupPortForwardingArgs(portForward?: string): string {
 
 export function setupNATNetworkArgs(portForward?: string): string {
   if (!portForward) {
-    return "user,id=net0,model=virtio";
+    return "user,id=net0";
   }
 
   const portForwarding = setupPortForwardingArgs(portForward);
