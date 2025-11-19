@@ -5,6 +5,8 @@ import chalk from "chalk";
 import { Data, Effect, pipe } from "effect";
 import Moniker from "moniker";
 import {
+  DEBIAN_DEFAULT_VERSION,
+  DEBIAN_ISO_URL,
   EMPTY_DISK_THRESHOLD_KB,
   FEDORA_COREOS_DEFAULT_VERSION,
   FEDORA_COREOS_IMG_URL,
@@ -750,6 +752,30 @@ export const constructGentooImageURL = (
     new InvalidImageNameError({
       image,
       cause: "Image name does not match Gentoo naming conventions.",
+    }),
+  );
+};
+
+export const constructDebianImageURL = (
+  image: string,
+): Effect.Effect<string, InvalidImageNameError, never> => {
+  // detect with regex if image matches debian pattern: debian-<version> or debian
+  const debianRegex = /^(debian)(-(\d+\.\d+\.\d+))?$/;
+  const match = image.match(debianRegex);
+  if (match?.[3]) {
+    return Effect.succeed(
+      DEBIAN_ISO_URL.replaceAll(DEBIAN_DEFAULT_VERSION, match[3]),
+    );
+  }
+
+  if (match) {
+    return Effect.succeed(DEBIAN_ISO_URL);
+  }
+
+  return Effect.fail(
+    new InvalidImageNameError({
+      image,
+      cause: "Image name does not match Debian naming conventions.",
     }),
   );
 };

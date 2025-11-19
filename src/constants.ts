@@ -24,3 +24,9 @@ export const FEDORA_IMG_URL: string =
 export const GENTOO_IMG_URL: string = Deno.build.arch === "aarch64"
   ? "https://distfiles.gentoo.org/releases/arm64/autobuilds/20251116T233105Z/di-arm64-console-20251116T233105Z.qcow2"
   : "https://distfiles.gentoo.org/releases/amd64/autobuilds/20251116T161545Z/di-amd64-console-20251116T161545Z.qcow2";
+
+export const DEBIAN_DEFAULT_VERSION: string = "13.2.0";
+
+export const DEBIAN_ISO_URL: string = Deno.build.arch === "aarch64"
+  ? `https://cdimage.debian.org/debian-cd/current/arm64/iso-cd/debian-${DEBIAN_DEFAULT_VERSION}-arm64-netinst.iso`
+  : `https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-${DEBIAN_DEFAULT_VERSION}-amd64-netinst.iso`;

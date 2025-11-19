@@ -1,12 +1,14 @@
 import { assertEquals } from "@std/assert";
 import { Effect, pipe } from "effect";
 import {
+  DEBIAN_ISO_URL,
   FEDORA_COREOS_IMG_URL,
   GENTOO_IMG_URL,
   NIXOS_ISO_URL,
 } from "./constants.ts";
 import {
   constructCoreOSImageURL,
+  constructDebianImageURL,
   constructGentooImageURL,
   constructNixOSImageURL,
 } from "./utils.ts";
@@ -125,6 +127,44 @@ Deno.test("Test invalid Gentoo Image Name", () => {
   const url = Effect.runSync(
     pipe(
       constructGentooImageURL("gentoo-latest"),
+      Effect.catchAll((_error) => Effect.succeed(null as string | null)),
+    ),
+  );
+
+  assertEquals(url, null);
+});
+
+Deno.test("Test valid Debian Image Name", () => {
+  const url = Effect.runSync(
+    pipe(
+      constructDebianImageURL("debian-13.2.0"),
+      Effect.catchAll((_error) => Effect.succeed(null as string | null)),
+    ),
+  );
+
+  const arch = Deno.build.arch === "aarch64" ? "arm64" : "amd64";
+  assertEquals(
+    url,
+    `https://cdimage.debian.org/debian-cd/current/${arch}/iso-cd/debian-13.2.0-${arch}-netinst.iso`,
+  );
+});
+
+Deno.test("Test valid Debian Image Name", () => {
+  const url = Effect.runSync(
+    pipe(
+      constructDebianImageURL("debian"),
+      Effect.catchAll((_error) => Effect.succeed(null as string | null)),
+    ),
+  );
+
+  const arch = Deno.build.arch === "aarch64" ? "arm64" : "amd64";
+  assertEquals(url, DEBIAN_ISO_URL);
+});
+
+Deno.test("Test invalid Debian Image Name", () => {
+  const url = Effect.runSync(
+    pipe(
+      constructDebianImageURL("debian-latest"),
       Effect.catchAll((_error) => Effect.succeed(null as string | null)),
     ),
   );
