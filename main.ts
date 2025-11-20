@@ -25,6 +25,7 @@ import restart from "./src/subcommands/restart.ts";
 import rm from "./src/subcommands/rm.ts";
 import rmi from "./src/subcommands/rmi.ts";
 import run from "./src/subcommands/run.ts";
+import seed from "./src/subcommands/seed.ts";
 import serve from "./src/subcommands/serve.ts";
 import start from "./src/subcommands/start.ts";
 import stop from "./src/subcommands/stop.ts";
@@ -592,6 +593,13 @@ if (import.meta.main) {
     .option("-p, --port <port:number>", "Port to listen on", { default: 8889 })
     .action(() => {
       serve();
+    })
+    .command(
+      "seed",
+      "Seed initial cloud-init user-data and meta-data files for the VM",
+    )
+    .action(async () => {
+      await seed();
     })
     .parse(Deno.args);
 }

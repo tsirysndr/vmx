@@ -35,6 +35,7 @@
     "jsr:@std/path@~1.0.6": "1.0.9",
     "jsr:@std/text@~1.0.7": "1.0.16",
     "jsr:@std/toml@^1.0.11": "1.0.11",
+    "jsr:@std/yaml@^1.0.10": "1.0.10",
     "jsr:@zod/zod@^4.1.12": "4.1.12",
     "npm:@hono/swagger-ui@~0.5.2": "0.5.2_hono@4.10.6",
     "npm:@paralleldrive/cuid2@^3.0.4": "3.0.4",
@@ -180,6 +181,9 @@
         "jsr:@std/collections"
       ]
     },
+    "@std/yaml@1.0.10": {
+      "integrity": "245706ea3511cc50c8c6d00339c23ea2ffa27bd2c7ea5445338f8feff31fa58e"
+    },
     "@zod/zod@4.1.12": {
       "integrity": "5876ed4c6d44673faf5120f0a461a2ada2eb6c735329d3ebaf5ba1fc08387695"
     }
@@ -257,6 +261,7 @@
       "jsr:@std/io@~0.225.2",
       "jsr:@std/path@^1.1.2",
       "jsr:@std/toml@^1.0.11",
+      "jsr:@std/yaml@^1.0.10",
       "jsr:@zod/zod@^4.1.12",
       "npm:@hono/swagger-ui@~0.5.2",
       "npm:@paralleldrive/cuid2@^3.0.4",
