@@ -159,7 +159,6 @@ Deno.test("Test valid Debian Image Name", () => {
     ),
   );
 
-  const arch = Deno.build.arch === "aarch64" ? "arm64" : "amd64";
   assertEquals(url, DEBIAN_ISO_URL);
 });
 
