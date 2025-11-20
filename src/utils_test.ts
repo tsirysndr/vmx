@@ -2,10 +2,13 @@ import { assertEquals } from "@std/assert";
 import { Effect, pipe } from "effect";
 import {
   ALPINE_ISO_URL,
+  DEBIAN_CLOUD_IMG_URL,
   DEBIAN_ISO_URL,
   FEDORA_COREOS_IMG_URL,
   GENTOO_IMG_URL,
   NIXOS_ISO_URL,
+  UBUNTU_CLOUD_IMG_URL,
+  UBUNTU_ISO_URL,
 } from "./constants.ts";
 import {
   constructAlpineImageURL,
@@ -13,6 +16,7 @@ import {
   constructDebianImageURL,
   constructGentooImageURL,
   constructNixOSImageURL,
+  constructUbuntuImageURL,
 } from "./utils.ts";
 
 Deno.test("Test Default Fedora CoreOS Image URL", () => {
@@ -159,8 +163,18 @@ Deno.test("Test valid Debian Image Name", () => {
     ),
   );
 
-  const arch = Deno.build.arch === "aarch64" ? "arm64" : "amd64";
   assertEquals(url, DEBIAN_ISO_URL);
+});
+
+Deno.test("Test valid Debian Image Name (Cloud)", () => {
+  const url = Effect.runSync(
+    pipe(
+      constructDebianImageURL("debian", true),
+      Effect.catchAll((_error) => Effect.succeed(null as string | null)),
+    ),
+  );
+
+  assertEquals(url, DEBIAN_CLOUD_IMG_URL);
 });
 
 Deno.test("Test invalid Debian Image Name", () => {
@@ -208,4 +222,27 @@ Deno.test("Test invalid Alpine Image Name", () => {
   );
 
   assertEquals(url, null);
+});
+
+// ubuntu
+Deno.test("Test valid Ubuntu Image Name", () => {
+  const url = Effect.runSync(
+    pipe(
+      constructUbuntuImageURL("ubuntu"),
+      Effect.catchAll((_error) => Effect.succeed(null as string | null)),
+    ),
+  );
+
+  assertEquals(url, UBUNTU_ISO_URL);
+});
+
+Deno.test("Test valid Ubuntu Image Name (Cloud)", () => {
+  const url = Effect.runSync(
+    pipe(
+      constructUbuntuImageURL("ubuntu", true),
+      Effect.catchAll((_error) => Effect.succeed(null as string | null)),
+    ),
+  );
+
+  assertEquals(url, UBUNTU_CLOUD_IMG_URL);
 });

@@ -36,6 +36,7 @@ import {
   constructFedoraImageURL,
   constructGentooImageURL,
   constructNixOSImageURL,
+  constructUbuntuImageURL,
   createDriveImageIfNeeded,
   downloadIso,
   emptyDiskImage,
@@ -97,6 +98,10 @@ if (import.meta.main) {
     .option(
       "--install",
       "Persist changes to the VM disk image",
+    )
+    .option(
+      "--cloud",
+      "Use cloud-init for initial configuration (only for compatible images)",
     )
     .example(
       "Create a default VM configuration file",
@@ -251,7 +256,7 @@ if (import.meta.main) {
           }
 
           const debianImageURL = yield* pipe(
-            constructDebianImageURL(input),
+            constructDebianImageURL(input, options.cloud),
             Effect.catchAll(() => Effect.succeed(null)),
           );
 
@@ -266,6 +271,25 @@ if (import.meta.main) {
               isoPath = yield* downloadIso(debianImageURL, options);
             } else {
               isoPath = basename(debianImageURL);
+            }
+          }
+
+          const ubuntuImageURL = yield* pipe(
+            constructUbuntuImageURL(input, options.cloud),
+            Effect.catchAll(() => Effect.succeed(null)),
+          );
+
+          if (ubuntuImageURL) {
+            const cached = yield* pipe(
+              basename(ubuntuImageURL),
+              fileExists,
+              Effect.flatMap(() => Effect.succeed(true)),
+              Effect.catchAll(() => Effect.succeed(false)),
+            );
+            if (!cached) {
+              isoPath = yield* downloadIso(ubuntuImageURL, options);
+            } else {
+              isoPath = basename(ubuntuImageURL);
             }
           }
 

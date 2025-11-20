@@ -7,6 +7,7 @@ import Moniker from "moniker";
 import {
   ALPINE_DEFAULT_VERSION,
   ALPINE_ISO_URL,
+  DEBIAN_CLOUD_IMG_URL,
   DEBIAN_DEFAULT_VERSION,
   DEBIAN_ISO_URL,
   EMPTY_DISK_THRESHOLD_KB,
@@ -17,6 +18,8 @@ import {
   LOGS_DIR,
   NIXOS_DEFAULT_VERSION,
   NIXOS_ISO_URL,
+  UBUNTU_CLOUD_IMG_URL,
+  UBUNTU_ISO_URL,
 } from "./constants.ts";
 import type { Image } from "./db.ts";
 import { generateRandomMacAddress } from "./network.ts";
@@ -37,6 +40,7 @@ export interface Options {
   detach?: boolean;
   install?: boolean;
   volume?: string;
+  cloud?: boolean;
 }
 
 class LogCommandError extends Data.TaggedError("LogCommandError")<{
@@ -377,6 +381,42 @@ export const setupAlpineArgs = (imagePath?: string | null) =>
     return [];
   });
 
+export const setupDebianArgs = (imagePath?: string | null) =>
+  Effect.sync(() => {
+    if (
+      imagePath &&
+      imagePath.endsWith(".qcow2") &&
+      imagePath.includes("debian")
+    ) {
+      return [
+        "-drive",
+        `file=${imagePath},format=qcow2,if=virtio`,
+        "-drive",
+        "if=virtio,file=seed.iso,media=cdrom",
+      ];
+    }
+
+    return [];
+  });
+
+export const setupUbuntuArgs = (imagePath?: string | null) =>
+  Effect.sync(() => {
+    if (
+      imagePath &&
+      imagePath.endsWith(".img") &&
+      imagePath.includes("server-cloudimg")
+    ) {
+      return [
+        "-drive",
+        `file=${imagePath},format=qcow2,if=virtio`,
+        "-drive",
+        "if=virtio,file=seed.iso,media=cdrom",
+      ];
+    }
+
+    return [];
+  });
+
 export const runQemu = (isoPath: string | null, options: Options) =>
   Effect.gen(function* () {
     const macAddress = yield* generateRandomMacAddress();
@@ -390,6 +430,8 @@ export const runQemu = (isoPath: string | null, options: Options) =>
     let fedoraArgs: string[] = yield* setupFedoraArgs(isoPath || options.image);
     let gentooArgs: string[] = yield* setupGentooArgs(isoPath || options.image);
     let alpineArgs: string[] = yield* setupAlpineArgs(isoPath || options.image);
+    let debianArgs: string[] = yield* setupDebianArgs(isoPath || options.image);
+    let ubuntuArgs: string[] = yield* setupUbuntuArgs(isoPath || options.image);
 
     if (coreosArgs.length > 0 && !isoPath) {
       coreosArgs = coreosArgs.slice(2);
@@ -405,6 +447,14 @@ export const runQemu = (isoPath: string | null, options: Options) =>
 
     if (alpineArgs.length > 0 && !isoPath) {
       alpineArgs = alpineArgs.slice(2);
+    }
+
+    if (debianArgs.length > 0 && !isoPath) {
+      debianArgs = [];
+    }
+
+    if (ubuntuArgs.length > 0 && !isoPath) {
+      ubuntuArgs = [];
     }
 
     const qemuArgs = [
@@ -437,6 +487,8 @@ export const runQemu = (isoPath: string | null, options: Options) =>
       ...fedoraArgs,
       ...gentooArgs,
       ...alpineArgs,
+      ...debianArgs,
+      ...ubuntuArgs,
       ..._.compact(
         options.image && [
           "-drive",
@@ -784,7 +836,12 @@ export const constructGentooImageURL = (
 
 export const constructDebianImageURL = (
   image: string,
+  cloud: boolean = false,
 ): Effect.Effect<string, InvalidImageNameError, never> => {
+  if (cloud && image === "debian") {
+    return Effect.succeed(DEBIAN_CLOUD_IMG_URL);
+  }
+
   // detect with regex if image matches debian pattern: debian-<version> or debian
   const debianRegex = /^(debian)(-(\d+\.\d+\.\d+))?$/;
   const match = image.match(debianRegex);
@@ -826,6 +883,28 @@ export const constructAlpineImageURL = (
     new InvalidImageNameError({
       image,
       cause: "Image name does not match Alpine naming conventions.",
+    }),
+  );
+};
+
+export const constructUbuntuImageURL = (
+  image: string,
+  cloud: boolean = false,
+): Effect.Effect<string, InvalidImageNameError, never> => {
+  // detect with regex if image matches ubuntu pattern: ubuntu
+  const ubuntuRegex = /^(ubuntu)$/;
+  const match = image.match(ubuntuRegex);
+  if (match) {
+    if (cloud) {
+      return Effect.succeed(UBUNTU_CLOUD_IMG_URL);
+    }
+    return Effect.succeed(UBUNTU_ISO_URL);
+  }
+
+  return Effect.fail(
+    new InvalidImageNameError({
+      image,
+      cause: "Image name does not match Ubuntu naming conventions.",
     }),
   );
 };
