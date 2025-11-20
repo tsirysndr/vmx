@@ -8,8 +8,10 @@ import {
   safeKillQemu,
   setupAlpineArgs,
   setupCoreOSArgs,
+  setupDebianArgs,
   setupFirmwareFilesIfNeeded,
   setupNATNetworkArgs,
+  setupUbuntuArgs,
 } from "../utils.ts";
 
 class VmNotFoundError extends Data.TaggedError("VmNotFoundError")<{
@@ -62,6 +64,8 @@ const buildQemuArgs = (vm: VirtualMachine, firmwareArgs: string[]) => {
 
   let coreosArgs: string[] = Effect.runSync(setupCoreOSArgs(vm.drivePath));
   let alpineArgs: string[] = Effect.runSync(setupAlpineArgs(vm.isoPath));
+  let debianArgs: string[] = Effect.runSync(setupDebianArgs(vm.isoPath));
+  let ubuntuArgs: string[] = Effect.runSync(setupUbuntuArgs(vm.isoPath));
 
   if (coreosArgs.length > 0) {
     coreosArgs = coreosArgs.slice(2);
@@ -69,6 +73,14 @@ const buildQemuArgs = (vm: VirtualMachine, firmwareArgs: string[]) => {
 
   if (alpineArgs.length > 0) {
     alpineArgs = alpineArgs.slice(2);
+  }
+
+  if (debianArgs.length > 0) {
+    debianArgs = debianArgs.slice(2);
+  }
+
+  if (ubuntuArgs.length > 0) {
+    ubuntuArgs = ubuntuArgs.slice(2);
   }
 
   return Effect.succeed([
@@ -104,6 +116,8 @@ const buildQemuArgs = (vm: VirtualMachine, firmwareArgs: string[]) => {
     ),
     ...coreosArgs,
     ...alpineArgs,
+    ...debianArgs,
+    ...ubuntuArgs,
   ]);
 };
 

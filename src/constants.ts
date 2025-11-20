@@ -48,3 +48,11 @@ export const ALPINE_ISO_URL: string = Deno.build.arch === "aarch64"
       .slice(0, 2)
       .join(".")
   }/releases/cloud/generic_alpine-${ALPINE_DEFAULT_VERSION}-${Deno.build.arch}-uefi-tiny-r0.qcow2`;
+
+export const DEBIAN_CLOUD_IMG_URL: string = Deno.build.arch === "aarch64"
+  ? "https://cdimage.debian.org/images/cloud/trixie/20251117-2299/debian-13-generic-arm64-20251117-2299.qcow2"
+  : "https://cdimage.debian.org/images/cloud/trixie/20251117-2299/debian-13-generic-amd64-20251117-2299.qcow2";
+
+export const UBUNTU_CLOUD_IMG_URL: string = Deno.build.arch === "aarch64"
+  ? "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-arm64.img"
+  : "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img";
