@@ -38,7 +38,7 @@ export const snakeCase = (obj: unknown): unknown => {
       Object.entries(obj).map(([key, value]) => [
         _.snakeCase(key),
         snakeCase(value),
-      ])
+      ]),
     );
   }
   return obj;
@@ -57,7 +57,7 @@ const writeMetaData = (seed: Seed) =>
         stringify(snakeCase(seed.metaData), {
           flowLevel: -1,
           lineWidth: -1,
-        })
+        }),
       ),
     catch: (error) => new FileSystemError(error),
   });
@@ -67,10 +67,12 @@ const writeUserData = (seed: Seed) =>
     try: () =>
       Deno.writeTextFile(
         "seed/user-data",
-        `#cloud-config\n${stringify(snakeCase(seed.userData), {
-          flowLevel: -1,
-          lineWidth: -1,
-        })}`
+        `#cloud-config\n${
+          stringify(snakeCase(seed.userData), {
+            flowLevel: -1,
+            lineWidth: -1,
+          })
+        }`,
       ),
     catch: (error) => new FileSystemError(error),
   });
@@ -98,9 +100,11 @@ const runXorriso = Effect.tryPromise({
     if (!status.success) {
       throw new XorrisoError(
         status.code,
-        `xorriso failed with code ${status.code}. Please ensure ${chalk.green(
-          "xorriso"
-        )} is installed and accessible in your PATH.`
+        `xorriso failed with code ${status.code}. Please ensure ${
+          chalk.green(
+            "xorriso",
+          )
+        } is installed and accessible in your PATH.`,
       );
     }
 
@@ -112,7 +116,7 @@ const runXorriso = Effect.tryPromise({
       null,
       `Unexpected error: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
     );
   },
 });
@@ -123,7 +127,7 @@ export const createSeedIso = (seed: Seed) =>
     Effect.flatMap(() =>
       Effect.all([writeMetaData(seed), writeUserData(seed)])
     ),
-    Effect.flatMap(() => runXorriso)
+    Effect.flatMap(() => runXorriso),
   );
 
 export default (seed: Seed) => Effect.runPromise(createSeedIso(seed));
