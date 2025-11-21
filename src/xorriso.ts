@@ -121,13 +121,57 @@ const runXorriso = Effect.tryPromise({
   },
 });
 
+const runGenisoimage = Effect.tryPromise({
+  try: async () => {
+    const genisoimage = new Deno.Command("genisoimage", {
+      args: [
+        "-output",
+        "seed.iso",
+        "-volid",
+        "cidata",
+        "-joliet",
+        "-rock",
+        "seed",
+      ],
+      stdout: "inherit",
+      stderr: "inherit",
+    }).spawn();
+
+    const status = await genisoimage.status;
+
+    if (!status.success) {
+      throw new XorrisoError(
+        status.code,
+        `genisoimage failed with code ${status.code}. Please ensure ${
+          chalk.green(
+            "genisoimage",
+          )
+        } is installed and accessible in your PATH.`,
+      );
+    }
+
+    return status;
+  },
+  catch: (error) => {
+    if (error instanceof XorrisoError) return error;
+    return new XorrisoError(
+      null,
+      `Unexpected error: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  },
+});
+
 export const createSeedIso = (seed: Seed) =>
   pipe(
     createSeedDirectory,
     Effect.flatMap(() =>
       Effect.all([writeMetaData(seed), writeUserData(seed)])
     ),
-    Effect.flatMap(() => runXorriso),
+    Effect.flatMap(() =>
+      Deno.build.os === "linux" ? runGenisoimage : runXorriso
+    ),
   );
 
 export default (seed: Seed) => Effect.runPromise(createSeedIso(seed));
