@@ -1,21 +1,25 @@
 import { assertEquals } from "@std/assert";
 import { Effect, pipe } from "effect";
 import {
+  ALMA_LINUX_IMG_URL,
   ALPINE_ISO_URL,
   DEBIAN_CLOUD_IMG_URL,
   DEBIAN_ISO_URL,
   FEDORA_COREOS_IMG_URL,
   GENTOO_IMG_URL,
   NIXOS_ISO_URL,
+  ROCKY_LINUX_IMG_URL,
   UBUNTU_CLOUD_IMG_URL,
   UBUNTU_ISO_URL,
 } from "./constants.ts";
 import {
+  constructAlmaLinuxImageURL,
   constructAlpineImageURL,
   constructCoreOSImageURL,
   constructDebianImageURL,
   constructGentooImageURL,
   constructNixOSImageURL,
+  constructRockyLinuxImageURL,
   constructUbuntuImageURL,
 } from "./utils.ts";
 
@@ -245,4 +249,26 @@ Deno.test("Test valid Ubuntu Image Name (Cloud)", () => {
   );
 
   assertEquals(url, UBUNTU_CLOUD_IMG_URL);
+});
+
+Deno.test("Test valid AlmaLinux Image Name", () => {
+  const url = Effect.runSync(
+    pipe(
+      constructAlmaLinuxImageURL("almalinux"),
+      Effect.catchAll((_error) => Effect.succeed(null as string | null)),
+    ),
+  );
+
+  assertEquals(url, ALMA_LINUX_IMG_URL);
+});
+
+Deno.test("Test valid RockyLinux Image Name", () => {
+  const url = Effect.runSync(
+    pipe(
+      constructRockyLinuxImageURL("rockylinux"),
+      Effect.catchAll((_error) => Effect.succeed(null as string | null)),
+    ),
+  );
+
+  assertEquals(url, ROCKY_LINUX_IMG_URL);
 });

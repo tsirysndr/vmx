@@ -32,11 +32,13 @@ import stop from "./src/subcommands/stop.ts";
 import tag from "./src/subcommands/tag.ts";
 import * as volumes from "./src/subcommands/volume.ts";
 import {
+  constructAlmaLinuxImageURL,
   constructAlpineImageURL,
   constructDebianImageURL,
   constructFedoraImageURL,
   constructGentooImageURL,
   constructNixOSImageURL,
+  constructRockyLinuxImageURL,
   constructUbuntuImageURL,
   createDriveImageIfNeeded,
   downloadIso,
@@ -310,6 +312,44 @@ if (import.meta.main) {
               isoPath = yield* downloadIso(alpineImageURL, options);
             } else {
               isoPath = basename(alpineImageURL);
+            }
+          }
+
+          const almalinuxImageURL = yield* pipe(
+            constructAlmaLinuxImageURL(input),
+            Effect.catchAll(() => Effect.succeed(null)),
+          );
+
+          if (almalinuxImageURL) {
+            const cached = yield* pipe(
+              basename(almalinuxImageURL),
+              fileExists,
+              Effect.flatMap(() => Effect.succeed(true)),
+              Effect.catchAll(() => Effect.succeed(false)),
+            );
+            if (!cached) {
+              isoPath = yield* downloadIso(almalinuxImageURL, options);
+            } else {
+              isoPath = basename(almalinuxImageURL);
+            }
+          }
+
+          const rockylinuxImageURL = yield* pipe(
+            constructRockyLinuxImageURL(input),
+            Effect.catchAll(() => Effect.succeed(null)),
+          );
+
+          if (rockylinuxImageURL) {
+            const cached = yield* pipe(
+              basename(rockylinuxImageURL),
+              fileExists,
+              Effect.flatMap(() => Effect.succeed(true)),
+              Effect.catchAll(() => Effect.succeed(false)),
+            );
+            if (!cached) {
+              isoPath = yield* downloadIso(rockylinuxImageURL, options);
+            } else {
+              isoPath = basename(rockylinuxImageURL);
             }
           }
         }

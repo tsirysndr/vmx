@@ -56,3 +56,11 @@ export const DEBIAN_CLOUD_IMG_URL: string = Deno.build.arch === "aarch64"
 export const UBUNTU_CLOUD_IMG_URL: string = Deno.build.arch === "aarch64"
   ? "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-arm64.img"
   : "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img";
+
+export const ALMA_LINUX_IMG_URL: string = Deno.build.arch === "aarch64"
+  ? "https://repo.almalinux.org/almalinux/10/cloud/aarch64/images/AlmaLinux-10-GenericCloud-latest.aarch64.qcow2"
+  : "https://repo.almalinux.org/almalinux/10/cloud/x86_64/images/AlmaLinux-10-GenericCloud-latest.x86_64.qcow2";
+
+export const ROCKY_LINUX_IMG_URL: string = Deno.build.arch === "aarch64"
+  ? "https://dl.rockylinux.org/pub/rocky/9/images/aarch64/Rocky-9-GenericCloud.latest.aarch64.qcow2"
+  : "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2";
