@@ -42,6 +42,9 @@ const createTable = () =>
     ]),
   );
 
+const ellipsis = (str: string, maxLength: number) =>
+  str.length > maxLength ? `${str.slice(0, maxLength - 3)}...` : str;
+
 const populateTable = (table: Table, vms: VirtualMachine[]) =>
   Effect.sync(() => {
     for (const vm of vms) {
@@ -51,7 +54,7 @@ const populateTable = (table: Table, vms: VirtualMachine[]) =>
         vm.memory,
         formatStatus(vm),
         vm.pid?.toString() ?? "-",
-        basename(vm.drivePath || vm.isoPath || "-"),
+        ellipsis(basename(vm.drivePath || vm.isoPath || "-"), 20),
         vm.bridge ?? "-",
         formatPorts(vm.portForward),
         dayjs.utc(vm.createdAt).local().fromNow(),
