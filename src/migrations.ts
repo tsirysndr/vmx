@@ -34,11 +34,15 @@ migrations["001"] = {
       .addColumn("isoPath", "varchar")
       .addColumn("status", "varchar", (col) => col.notNull())
       .addColumn("pid", "integer")
-      .addColumn("createdAt", "varchar", (col) =>
-        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+      .addColumn(
+        "createdAt",
+        "varchar",
+        (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
       )
-      .addColumn("updatedAt", "varchar", (col) =>
-        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+      .addColumn(
+        "updatedAt",
+        "varchar",
+        (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
       )
       .execute();
   },
@@ -153,8 +157,10 @@ migrations["006"] = {
       .addColumn("size", "integer", (col) => col.notNull())
       .addColumn("path", "varchar", (col) => col.notNull())
       .addColumn("format", "varchar", (col) => col.notNull().defaultTo("qcow2"))
-      .addColumn("createdAt", "varchar", (col) =>
-        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+      .addColumn(
+        "createdAt",
+        "varchar",
+        (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
       )
       .addUniqueConstraint("images_repository_tag_unique", [
         "repository",
@@ -212,12 +218,16 @@ migrations["008"] = {
       .createTable("volumes")
       .addColumn("id", "varchar", (col) => col.primaryKey())
       .addColumn("name", "varchar", (col) => col.notNull().unique())
-      .addColumn("baseImageId", "varchar", (col) =>
-        col.notNull().references("images.id").onDelete("cascade")
+      .addColumn(
+        "baseImageId",
+        "varchar",
+        (col) => col.notNull().references("images.id").onDelete("cascade"),
       )
       .addColumn("path", "varchar", (col) => col.notNull())
-      .addColumn("createdAt", "varchar", (col) =>
-        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+      .addColumn(
+        "createdAt",
+        "varchar",
+        (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
       )
       .execute();
   },
@@ -233,12 +243,16 @@ migrations["009"] = {
       .createTable("volumes_new")
       .addColumn("id", "varchar", (col) => col.primaryKey())
       .addColumn("name", "varchar", (col) => col.notNull().unique())
-      .addColumn("baseImageId", "varchar", (col) =>
-        col.notNull().references("images.id").onDelete("cascade")
+      .addColumn(
+        "baseImageId",
+        "varchar",
+        (col) => col.notNull().references("images.id").onDelete("cascade"),
       )
       .addColumn("path", "varchar", (col) => col.notNull())
-      .addColumn("createdAt", "varchar", (col) =>
-        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+      .addColumn(
+        "createdAt",
+        "varchar",
+        (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
       )
       .execute();
 
@@ -307,11 +321,15 @@ migrations["012"] = {
       .addColumn("pid", "integer")
       .addColumn("volume", "varchar")
       .addColumn("seed", "varchar")
-      .addColumn("createdAt", "varchar", (col) =>
-        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+      .addColumn(
+        "createdAt",
+        "varchar",
+        (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
       )
-      .addColumn("updatedAt", "varchar", (col) =>
-        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+      .addColumn(
+        "updatedAt",
+        "varchar",
+        (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
       )
       .execute();
 
@@ -321,9 +339,10 @@ migrations["012"] = {
     `.execute(db);
 
     await db.schema.dropTable("virtual_machines").execute();
-    await sql`ALTER TABLE virtual_machines_new RENAME TO virtual_machines`.execute(
-      db
-    );
+    await sql`ALTER TABLE virtual_machines_new RENAME TO virtual_machines`
+      .execute(
+        db,
+      );
   },
 
   async down(db: Kysely<unknown>): Promise<void> {
@@ -347,11 +366,15 @@ migrations["012"] = {
       .addColumn("pid", "integer")
       .addColumn("volume", "varchar")
       .addColumn("seed", "varchar")
-      .addColumn("createdAt", "varchar", (col) =>
-        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+      .addColumn(
+        "createdAt",
+        "varchar",
+        (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
       )
-      .addColumn("updatedAt", "varchar", (col) =>
-        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+      .addColumn(
+        "updatedAt",
+        "varchar",
+        (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
       )
       .execute();
 
@@ -361,9 +384,10 @@ migrations["012"] = {
     `.execute(db);
 
     await db.schema.dropTable("virtual_machines").execute();
-    await sql`ALTER TABLE virtual_machines_old RENAME TO virtual_machines`.execute(
-      db
-    );
+    await sql`ALTER TABLE virtual_machines_old RENAME TO virtual_machines`
+      .execute(
+        db,
+      );
   },
 };
 
