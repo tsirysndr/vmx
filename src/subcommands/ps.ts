@@ -39,8 +39,11 @@ const createTable = () =>
       "BRIDGE",
       "PORTS",
       "CREATED",
-    ]),
+    ])
   );
+
+const ellipsis = (str: string, maxLength: number) =>
+  str.length > maxLength ? `${str.slice(0, maxLength - 3)}...` : str;
 
 const populateTable = (table: Table, vms: VirtualMachine[]) =>
   Effect.sync(() => {
@@ -51,7 +54,7 @@ const populateTable = (table: Table, vms: VirtualMachine[]) =>
         vm.memory,
         formatStatus(vm),
         vm.pid?.toString() ?? "-",
-        basename(vm.drivePath || vm.isoPath || "-"),
+        ellipsis(basename(vm.drivePath || vm.isoPath || "-"), 20),
         vm.bridge ?? "-",
         formatPorts(vm.portForward),
         dayjs.utc(vm.createdAt).local().fromNow(),
@@ -76,7 +79,7 @@ const psEffect = (all: boolean) =>
     Effect.all([fetchVMs(all), createTable()]),
     Effect.flatMap(([vms, table]) => populateTable(table, vms)),
     Effect.flatMap(displayTable),
-    Effect.catchAll(handleError),
+    Effect.catchAll(handleError)
   );
 
 export default async function (all: boolean) {
@@ -86,13 +89,11 @@ export default async function (all: boolean) {
 function formatStatus(vm: VirtualMachine) {
   switch (vm.status) {
     case "RUNNING":
-      return `Up ${
-        dayjs
-          .utc(vm.updatedAt)
-          .local()
-          .fromNow()
-          .replace("ago", "")
-      }`;
+      return `Up ${dayjs
+        .utc(vm.updatedAt)
+        .local()
+        .fromNow()
+        .replace("ago", "")}`;
     case "STOPPED":
       return `Exited ${dayjs.utc(vm.updatedAt).local().fromNow()}`;
     default:
