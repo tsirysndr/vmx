@@ -39,7 +39,7 @@ export const snakeCase = (obj: unknown): unknown => {
       Object.entries(obj).map(([key, value]) => [
         _.snakeCase(key),
         snakeCase(value),
-      ])
+      ]),
     );
   }
   return obj;
@@ -58,7 +58,7 @@ const writeMetaData = (seed: Seed, outputPath: string) =>
         stringify(snakeCase(seed.metaData), {
           flowLevel: -1,
           lineWidth: -1,
-        })
+        }),
       ),
     catch: (error) => new FileSystemError(error),
   });
@@ -68,10 +68,12 @@ const writeUserData = (seed: Seed, outputPath: string) =>
     try: () =>
       Deno.writeTextFile(
         outputPath,
-        `#cloud-config\n${stringify(snakeCase(seed.userData), {
-          flowLevel: -1,
-          lineWidth: -1,
-        })}`
+        `#cloud-config\n${
+          stringify(snakeCase(seed.userData), {
+            flowLevel: -1,
+            lineWidth: -1,
+          })
+        }`,
       ),
     catch: (error) => new FileSystemError(error),
   });
@@ -100,9 +102,11 @@ const runXorriso = (outputPath: string, seedDir: string) =>
       if (!status.success) {
         throw new XorrisoError(
           status.code,
-          `xorriso failed with code ${status.code}. Please ensure ${chalk.green(
-            "xorriso"
-          )} is installed and accessible in your PATH.`
+          `xorriso failed with code ${status.code}. Please ensure ${
+            chalk.green(
+              "xorriso",
+            )
+          } is installed and accessible in your PATH.`,
         );
       }
 
@@ -114,7 +118,7 @@ const runXorriso = (outputPath: string, seedDir: string) =>
         null,
         `Unexpected error: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       );
     },
   });
@@ -141,11 +145,11 @@ const runGenisoimage = (outputPath: string, seedDir: string) =>
       if (!status.success) {
         throw new XorrisoError(
           status.code,
-          `genisoimage failed with code ${
-            status.code
-          }. Please ensure ${chalk.green(
-            "genisoimage"
-          )} is installed and accessible in your PATH.`
+          `genisoimage failed with code ${status.code}. Please ensure ${
+            chalk.green(
+              "genisoimage",
+            )
+          } is installed and accessible in your PATH.`,
         );
       }
 
@@ -157,7 +161,7 @@ const runGenisoimage = (outputPath: string, seedDir: string) =>
         null,
         `Unexpected error: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       );
     },
   });
@@ -165,7 +169,7 @@ const runGenisoimage = (outputPath: string, seedDir: string) =>
 export const createSeedIso = (
   outputPath: string,
   seed: Seed,
-  seedDir: string = "seed"
+  seedDir: string = "seed",
 ) =>
   pipe(
     createSeedDirectory,
@@ -179,7 +183,7 @@ export const createSeedIso = (
       Deno.build.os === "linux"
         ? runGenisoimage(outputPath, seedDir)
         : runXorriso(outputPath, seedDir)
-    )
+    ),
   );
 
 export default (outputPath: string, seed: Seed, seedDir: string = "seed") =>

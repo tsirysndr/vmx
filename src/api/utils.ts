@@ -40,7 +40,7 @@ export const handleError = (
     | FileSystemError
     | XorrisoError
     | Error,
-  c: Context
+  c: Context,
 ) =>
   Effect.sync(() => {
     if (error instanceof VmNotFoundError) {
@@ -52,7 +52,7 @@ export const handleError = (
           message: error.message || `Failed to stop VM ${error.vmName}`,
           code: "STOP_COMMAND_ERROR",
         },
-        500
+        500,
       );
     }
 
@@ -62,7 +62,7 @@ export const handleError = (
           message: error.message || "Failed to parse request body",
           code: "PARSE_BODY_ERROR",
         },
-        400
+        400,
       );
     }
 
@@ -72,7 +72,7 @@ export const handleError = (
           message: `VM ${error.name} is already running`,
           code: "VM_ALREADY_RUNNING",
         },
-        400
+        400,
       );
     }
 
@@ -82,23 +82,24 @@ export const handleError = (
           message: `Image ${error.id} not found`,
           code: "IMAGE_NOT_FOUND",
         },
-        404
+        404,
       );
     }
 
     if (error instanceof RemoveRunningVmError) {
       return c.json(
         {
-          message: `Cannot remove running VM with ID ${error.id}. Please stop it first.`,
+          message:
+            `Cannot remove running VM with ID ${error.id}. Please stop it first.`,
           code: "REMOVE_RUNNING_VM_ERROR",
         },
-        400
+        400,
       );
     }
 
     return c.json(
       { message: error instanceof Error ? error.message : String(error) },
-      500
+      500,
     );
   });
 
@@ -131,7 +132,7 @@ export const parseCreateMachineRequest = (c: Context) =>
 export const createVolumeIfNeeded = (
   image: Image,
   volumeName: string,
-  size?: string
+  size?: string,
 ): Effect.Effect<Volume, Error, never> =>
   Effect.gen(function* () {
     const volume = yield* getVolume(volumeName);

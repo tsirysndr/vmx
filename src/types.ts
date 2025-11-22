@@ -20,7 +20,7 @@ export const NewMachineSchema = MachineParamsSchema.extend({
       z
         .string()
         .trim()
-        .regex(/^\d+:\d+$/)
+        .regex(/^\d+:\d+$/),
     )
     .optional(),
   cpu: z.string().trim().default("host").optional(),
@@ -35,7 +35,7 @@ export const NewMachineSchema = MachineParamsSchema.extend({
     .string()
     .trim()
     .regex(
-      /^([a-zA-Z0-9\-\.]+\/)?([a-zA-Z0-9\-\.]+\/)?[a-zA-Z0-9\-\.]+(:[\w\.\-]+)?$/
+      /^([a-zA-Z0-9\-\.]+\/)?([a-zA-Z0-9\-\.]+\/)?[a-zA-Z0-9\-\.]+(:[\w\.\-]+)?$/,
     ),
   volume: z.string().trim().optional(),
   bridge: z.string().trim().optional(),
@@ -51,7 +51,7 @@ export const NewMachineSchema = MachineParamsSchema.extend({
         shell: z
           .string()
           .regex(
-            /^\/(usr\/bin|bin|usr\/local\/bin|usr\/pkg\/bin)\/[a-zA-Z0-9_-]+$/
+            /^\/(usr\/bin|bin|usr\/local\/bin|usr\/pkg\/bin)\/[a-zA-Z0-9_-]+$/,
           )
           .trim()
           .default("/bin/bash")
@@ -65,12 +65,12 @@ export const NewMachineSchema = MachineParamsSchema.extend({
             z
               .string()
               .regex(
-                /^(ssh-(rsa|ed25519|dss|ecdsa) AAAA[0-9A-Za-z+/]+[=]{0,3}( [^\n\r]*)?|ecdsa-sha2-nistp(256|384|521) AAAA[0-9A-Za-z+/]+[=]{0,3}( [^\n\r]*)?)$/
+                /^(ssh-(rsa|ed25519|dss|ecdsa) AAAA[0-9A-Za-z+/]+[=]{0,3}( [^\n\r]*)?|ecdsa-sha2-nistp(256|384|521) AAAA[0-9A-Za-z+/]+[=]{0,3}( [^\n\r]*)?)$/,
               )
-              .trim()
+              .trim(),
           )
           .min(1),
-      })
+      }),
     )
     .optional(),
   instanceId: z.string().trim().optional(),
@@ -85,7 +85,7 @@ export const NewVolumeSchema = z.object({
   baseImage: z
     .string()
     .regex(
-      /^([a-zA-Z0-9\-\.]+\/)?([a-zA-Z0-9\-\.]+\/)?[a-zA-Z0-9\-\.]+(:[\w\.\-]+)?$/
+      /^([a-zA-Z0-9\-\.]+\/)?([a-zA-Z0-9\-\.]+\/)?[a-zA-Z0-9\-\.]+(:[\w\.\-]+)?$/,
     ),
   size: z
     .string()
