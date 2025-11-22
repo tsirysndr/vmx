@@ -23,8 +23,8 @@ jobs:
       - uses: denoland/setup-deno@v2
       - name: Compile
         run: |
-            rm deno.lock || true
-            deno compile -A --no-check --output vmx --target ${{ matrix.target }} main.ts
+          rm deno.lock || true
+          deno compile -A --no-check --output vmx --target ${{ matrix.target }} main.ts
       - name: Set env
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - name: Archive assets
