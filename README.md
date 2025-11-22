@@ -107,7 +107,7 @@ architecture (ARM64/x86_64) and cache for subsequent runs.
 
 ```bash
 # Install with Deno
- deno install -A -r -f -g --config deno.json ./main.ts -n vmx
+ deno install -A -r -f -g jsr:@tsiry/vmx
 ```
 
 ### Requirements
