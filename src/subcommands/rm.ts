@@ -1,10 +1,7 @@
-import { Data, Effect, pipe } from "effect";
+import { Effect, pipe } from "effect";
 import type { VirtualMachine } from "../db.ts";
+import { VmNotFoundError } from "../errors.ts";
 import { getInstanceState, removeInstanceState } from "../state.ts";
-
-class VmNotFoundError extends Data.TaggedError("VmNotFoundError")<{
-  name: string;
-}> {}
 
 const findVm = (name: string) =>
   pipe(
@@ -28,9 +25,7 @@ const removeVm = (name: string, vm: VirtualMachine) =>
 const handleError = (error: VmNotFoundError | Error) =>
   Effect.sync(() => {
     if (error instanceof VmNotFoundError) {
-      console.error(
-        `Virtual machine with name or ID ${error.name} not found.`,
-      );
+      console.error(`Virtual machine with name or ID ${error.name} not found.`);
     } else {
       console.error(`An error occurred: ${error}`);
     }

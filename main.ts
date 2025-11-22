@@ -9,6 +9,7 @@ import { Effect, pipe } from "effect";
 import pkg from "./deno.json" with { type: "json" };
 import { initVmFile, mergeConfig, parseVmFile } from "./src/config.ts";
 import { CONFIG_FILE_NAME } from "./src/constants.ts";
+import { NoSuchFileError } from "./src/errors.ts";
 import { getImage } from "./src/images.ts";
 import { constructCoreOSImageURL } from "./src/mod.ts";
 import { createBridgeNetworkIfNeeded } from "./src/network.ts";
@@ -46,7 +47,6 @@ import {
   extractXz,
   fileExists,
   isValidISOurl,
-  NoSuchFileError,
   type Options,
   runQemu,
 } from "./src/utils.ts";

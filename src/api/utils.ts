@@ -1,32 +1,48 @@
-import { Data, Effect } from "effect";
+import { Effect } from "effect";
 import type { Context } from "hono";
 import type { Image, Volume } from "../db.ts";
-import { VmAlreadyRunningError } from "../subcommands/start.ts";
 import {
   type CommandError,
+  ImageNotFoundError,
+  ParseRequestError,
+  RemoveRunningVmError,
   StopCommandError,
+  VmAlreadyRunningError,
   VmNotFoundError,
-} from "../subcommands/stop.ts";
+} from "../errors.ts";
 import {
   MachineParamsSchema,
+  NewImageSchema,
   NewMachineSchema,
   NewVolumeSchema,
 } from "../types.ts";
 import { createVolume, getVolume } from "../volumes.ts";
-import { FileSystemError, XorrisoError } from "../xorriso.ts";
-import { ImageNotFoundError, RemoveRunningVmError } from "./machines.ts";
+import type { FileSystemError, XorrisoError } from "../xorriso.ts";
 
 export const parseQueryParams = (c: Context) => Effect.succeed(c.req.query());
 
 export const parseParams = (c: Context) => Effect.succeed(c.req.param());
 
-export const presentation = (c: Context) =>
-  Effect.flatMap((data) => Effect.succeed(c.json(data)));
+const convertBigIntToNumber = (obj: unknown): unknown => {
+  if (typeof obj === "bigint") {
+    return Number(obj);
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(convertBigIntToNumber);
+  }
+  if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => [
+        key,
+        convertBigIntToNumber(value),
+      ]),
+    );
+  }
+  return obj;
+};
 
-export class ParseRequestError extends Data.TaggedError("ParseRequestError")<{
-  cause?: unknown;
-  message: string;
-}> {}
+export const presentation = (c: Context) =>
+  Effect.flatMap((data) => Effect.succeed(c.json(convertBigIntToNumber(data))));
 
 export const handleError = (
   error:
@@ -121,6 +137,19 @@ export const parseCreateMachineRequest = (c: Context) =>
     try: async () => {
       const body = await c.req.json();
       return NewMachineSchema.parse(body);
+    },
+    catch: (error) =>
+      new ParseRequestError({
+        cause: error,
+        message: error instanceof Error ? error.message : String(error),
+      }),
+  });
+
+export const parseCreateImageRequest = (c: Context) =>
+  Effect.tryPromise({
+    try: async () => {
+      const body = await c.req.json();
+      return NewImageSchema.parse(body);
     },
     catch: (error) =>
       new ParseRequestError({

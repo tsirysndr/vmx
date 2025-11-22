@@ -1,8 +1,13 @@
 import { parseFlags } from "@cliffy/flags";
 import _ from "@es-toolkit/es-toolkit/compat";
-import { Data, Effect, pipe } from "effect";
+import { Effect, pipe } from "effect";
 import { LOGS_DIR } from "../constants.ts";
 import type { VirtualMachine, Volume } from "../db.ts";
+import {
+  CommandError,
+  VmAlreadyRunningError,
+  VmNotFoundError,
+} from "../errors.ts";
 import { getImage } from "../images.ts";
 import { getInstanceState, updateInstanceState } from "../state.ts";
 import {
@@ -18,20 +23,6 @@ import {
   setupUbuntuArgs,
 } from "../utils.ts";
 import { createVolume, getVolume } from "../volumes.ts";
-
-export class VmNotFoundError extends Data.TaggedError("VmNotFoundError")<{
-  name: string;
-}> {}
-
-export class VmAlreadyRunningError extends Data.TaggedError(
-  "VmAlreadyRunningError",
-)<{
-  name: string;
-}> {}
-
-export class CommandError extends Data.TaggedError("CommandError")<{
-  cause?: unknown;
-}> {}
 
 const findVm = (name: string) =>
   pipe(

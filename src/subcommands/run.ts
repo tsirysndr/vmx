@@ -1,9 +1,10 @@
 import { parseFlags } from "@cliffy/flags";
 import { Effect, pipe } from "effect";
 import type { Image, Volume } from "../db.ts";
+import { PullImageError } from "../errors.ts";
 import { getImage } from "../images.ts";
 import { createBridgeNetworkIfNeeded } from "../network.ts";
-import { pullImage, PullImageError, setupOrasBinary } from "../oras.ts";
+import { pullImage, setupOrasBinary } from "../oras.ts";
 import { type Options, runQemu, validateImage } from "../utils.ts";
 import { createVolume, getVolume } from "../volumes.ts";
 

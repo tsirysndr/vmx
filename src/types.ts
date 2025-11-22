@@ -81,16 +81,30 @@ export const NewMachineSchema = MachineParamsSchema.extend({
 export type NewMachine = z.infer<typeof NewMachineSchema>;
 
 export const NewVolumeSchema = z.object({
-  name: z.string(),
+  name: z.string().trim(),
   baseImage: z
     .string()
+    .trim()
     .regex(
       /^([a-zA-Z0-9\-\.]+\/)?([a-zA-Z0-9\-\.]+\/)?[a-zA-Z0-9\-\.]+(:[\w\.\-]+)?$/,
     ),
   size: z
     .string()
+    .trim()
     .regex(/^\d+(M|G|T)$/)
     .optional(),
 });
 
 export type NewVolume = z.infer<typeof NewVolumeSchema>;
+
+export const NewImageSchema = z.object({
+  from: z.string().trim(),
+  image: z
+    .string()
+    .trim()
+    .regex(
+      /^([a-zA-Z0-9\-\.]+\/)?([a-zA-Z0-9\-\.]+\/)?[a-zA-Z0-9\-\.]+(:[\w\.\-]+)?$/,
+    ),
+});
+
+export type NewImage = z.infer<typeof NewImageSchema>;

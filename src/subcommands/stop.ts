@@ -1,22 +1,9 @@
 import _ from "@es-toolkit/es-toolkit/compat";
 import chalk from "chalk";
-import { Data, Effect, pipe } from "effect";
+import { Effect, pipe } from "effect";
 import type { VirtualMachine } from "../db.ts";
+import { CommandError, StopCommandError, VmNotFoundError } from "../errors.ts";
 import { getInstanceState, updateInstanceState } from "../state.ts";
-
-export class VmNotFoundError extends Data.TaggedError("VmNotFoundError")<{
-  name: string;
-}> {}
-
-export class StopCommandError extends Data.TaggedError("StopCommandError")<{
-  vmName: string;
-  exitCode: number;
-  message?: string;
-}> {}
-
-export class CommandError extends Data.TaggedError("CommandError")<{
-  cause?: unknown;
-}> {}
 
 export const findVm = (name: string) =>
   pipe(
@@ -29,9 +16,11 @@ export const findVm = (name: string) =>
 export const logStopping = (vm: VirtualMachine) =>
   Effect.sync(() => {
     console.log(
-      `Stopping virtual machine ${chalk.greenBright(vm.name)} (ID: ${
-        chalk.greenBright(vm.id)
-      })...`,
+      `Stopping virtual machine ${
+        chalk.greenBright(
+          vm.name,
+        )
+      } (ID: ${chalk.greenBright(vm.id)})...`,
     );
   });
 
@@ -39,11 +28,7 @@ export const killProcess = (vm: VirtualMachine) =>
   Effect.tryPromise({
     try: async () => {
       const cmd = new Deno.Command(vm.bridge ? "sudo" : "kill", {
-        args: [
-          ..._.compact([vm.bridge && "kill"]),
-          "-TERM",
-          vm.pid.toString(),
-        ],
+        args: [..._.compact([vm.bridge && "kill"]), "-TERM", vm.pid.toString()],
         stdin: "inherit",
         stdout: "inherit",
         stderr: "inherit",
@@ -84,7 +69,9 @@ const handleError = (
     if (error instanceof VmNotFoundError) {
       console.error(
         `Virtual machine with name or ID ${
-          chalk.greenBright(error.name)
+          chalk.greenBright(
+            error.name,
+          )
         } not found.`,
       );
       Deno.exit(1);

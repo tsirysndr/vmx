@@ -1,5 +1,10 @@
-import { Hono } from "hono";
 import { Effect, pipe } from "effect";
+import { Hono } from "hono";
+import { ImageNotFoundError } from "../errors.ts";
+import { getImage } from "../images.ts";
+import { listVolumes } from "../mod.ts";
+import type { NewVolume } from "../types.ts";
+import { deleteVolume, getVolume } from "../volumes.ts";
 import {
   createVolumeIfNeeded,
   handleError,
@@ -7,21 +12,10 @@ import {
   parseParams,
   presentation,
 } from "./utils.ts";
-import { listVolumes } from "../mod.ts";
-import { deleteVolume, getVolume } from "../volumes.ts";
-import type { NewVolume } from "../types.ts";
-import { getImage } from "../images.ts";
-import { ImageNotFoundError } from "./machines.ts";
 
 const app = new Hono();
 
-app.get("/", (c) =>
-  Effect.runPromise(
-    pipe(
-      listVolumes(),
-      presentation(c),
-    ),
-  ));
+app.get("/", (c) => Effect.runPromise(pipe(listVolumes(), presentation(c))));
 
 app.get("/:id", (c) =>
   Effect.runPromise(

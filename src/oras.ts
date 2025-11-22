@@ -1,33 +1,18 @@
 import { createId } from "@paralleldrive/cuid2";
 import { basename, dirname } from "@std/path";
 import chalk from "chalk";
-import { Data, Effect, pipe } from "effect";
+import { Effect, pipe } from "effect";
 import { IMAGE_DIR } from "./constants.ts";
+import {
+  ImageAlreadyPulledError,
+  PullImageError,
+  PushImageError,
+} from "./errors.ts";
 import { getImage, saveImage } from "./images.ts";
 import { CONFIG_DIR, failOnMissingImage } from "./mod.ts";
 import { du, getCurrentArch } from "./utils.ts";
 
 const DEFAULT_ORAS_VERSION = "1.3.0";
-
-export class PushImageError extends Data.TaggedError("PushImageError")<{
-  cause?: unknown;
-}> {}
-
-export class PullImageError extends Data.TaggedError("PullImageError")<{
-  cause?: unknown;
-}> {}
-
-export class CreateDirectoryError extends Data.TaggedError(
-  "CreateDirectoryError",
-)<{
-  cause?: unknown;
-}> {}
-
-export class ImageAlreadyPulledError extends Data.TaggedError(
-  "ImageAlreadyPulledError",
-)<{
-  name: string;
-}> {}
 
 export async function setupOrasBinary(): Promise<void> {
   Deno.env.set("PATH", `${CONFIG_DIR}/bin:${Deno.env.get("PATH")}`);

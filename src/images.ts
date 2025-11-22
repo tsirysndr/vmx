@@ -1,11 +1,8 @@
-import { Data, Effect } from "effect";
+import { Effect } from "effect";
 import type { DeleteResult, InsertResult } from "kysely";
 import { ctx } from "./context.ts";
 import type { Image } from "./db.ts";
-
-export class DbError extends Data.TaggedError("DatabaseError")<{
-  message?: string;
-}> {}
+import { DbError } from "./errors.ts";
 
 export const listImages = (): Effect.Effect<Image[], DbError, never> =>
   Effect.tryPromise({
@@ -46,18 +43,16 @@ export const saveImage = (
 ): Effect.Effect<InsertResult[], DbError, never> =>
   Effect.tryPromise({
     try: () =>
-      ctx.db.insertInto("images")
+      ctx.db
+        .insertInto("images")
         .values(image)
         .onConflict((oc) =>
-          oc
-            .column("repository")
-            .column("tag")
-            .doUpdateSet({
-              size: image.size,
-              path: image.path,
-              format: image.format,
-              digest: image.digest,
-            })
+          oc.column("repository").column("tag").doUpdateSet({
+            size: image.size,
+            path: image.path,
+            format: image.format,
+            digest: image.digest,
+          })
         )
         .execute(),
     catch: (error) =>
@@ -71,15 +66,18 @@ export const deleteImage = (
 ): Effect.Effect<DeleteResult[], DbError, never> =>
   Effect.tryPromise({
     try: () =>
-      ctx.db.deleteFrom("images").where((eb) =>
-        eb.or([
-          eb.and([
-            eb("repository", "=", id.split(":")[0]),
-            eb("tag", "=", id.split(":")[1] || "latest"),
-          ]),
-          eb("id", "=", id),
-        ])
-      ).execute(),
+      ctx.db
+        .deleteFrom("images")
+        .where((eb) =>
+          eb.or([
+            eb.and([
+              eb("repository", "=", id.split(":")[0]),
+              eb("tag", "=", id.split(":")[1] || "latest"),
+            ]),
+            eb("id", "=", id),
+          ])
+        )
+        .execute(),
     catch: (error) =>
       new DbError({
         message: error instanceof Error ? error.message : String(error),

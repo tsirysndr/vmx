@@ -1,9 +1,10 @@
 import _ from "@es-toolkit/es-toolkit/compat";
 import { createId } from "@paralleldrive/cuid2";
-import { Data, Effect, pipe } from "effect";
+import { Effect, pipe } from "effect";
 import { Hono } from "hono";
 import Moniker from "moniker";
 import { SEED_DIR } from "../constants.ts";
+import { ImageNotFoundError, RemoveRunningVmError } from "../errors.ts";
 import { getImage } from "../images.ts";
 import { DEFAULT_VERSION, getInstanceState } from "../mod.ts";
 import { generateRandomMacAddress } from "../network.ts";
@@ -32,16 +33,6 @@ import {
   parseStartRequest,
   presentation,
 } from "./utils.ts";
-
-export class ImageNotFoundError extends Data.TaggedError("ImageNotFoundError")<{
-  id: string;
-}> {}
-
-export class RemoveRunningVmError extends Data.TaggedError(
-  "RemoveRunningVmError",
-)<{
-  id: string;
-}> {}
 
 const app = new Hono();
 
