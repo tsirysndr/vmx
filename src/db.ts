@@ -32,7 +32,7 @@ export type VirtualMachine = {
   diskFormat: string;
   isoPath?: string;
   portForward?: string;
-  version: string;
+  version?: string;
   status: STATUS;
   pid: number;
   volume?: string;

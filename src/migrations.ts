@@ -34,15 +34,11 @@ migrations["001"] = {
       .addColumn("isoPath", "varchar")
       .addColumn("status", "varchar", (col) => col.notNull())
       .addColumn("pid", "integer")
-      .addColumn(
-        "createdAt",
-        "varchar",
-        (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
+      .addColumn("createdAt", "varchar", (col) =>
+        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
       )
-      .addColumn(
-        "updatedAt",
-        "varchar",
-        (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
+      .addColumn("updatedAt", "varchar", (col) =>
+        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
       )
       .execute();
   },
@@ -157,10 +153,8 @@ migrations["006"] = {
       .addColumn("size", "integer", (col) => col.notNull())
       .addColumn("path", "varchar", (col) => col.notNull())
       .addColumn("format", "varchar", (col) => col.notNull().defaultTo("qcow2"))
-      .addColumn(
-        "createdAt",
-        "varchar",
-        (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
+      .addColumn("createdAt", "varchar", (col) =>
+        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
       )
       .addUniqueConstraint("images_repository_tag_unique", [
         "repository",
@@ -218,16 +212,12 @@ migrations["008"] = {
       .createTable("volumes")
       .addColumn("id", "varchar", (col) => col.primaryKey())
       .addColumn("name", "varchar", (col) => col.notNull().unique())
-      .addColumn(
-        "baseImageId",
-        "varchar",
-        (col) => col.notNull().references("images.id").onDelete("cascade"),
+      .addColumn("baseImageId", "varchar", (col) =>
+        col.notNull().references("images.id").onDelete("cascade")
       )
       .addColumn("path", "varchar", (col) => col.notNull())
-      .addColumn(
-        "createdAt",
-        "varchar",
-        (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
+      .addColumn("createdAt", "varchar", (col) =>
+        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
       )
       .execute();
   },
@@ -243,16 +233,12 @@ migrations["009"] = {
       .createTable("volumes_new")
       .addColumn("id", "varchar", (col) => col.primaryKey())
       .addColumn("name", "varchar", (col) => col.notNull().unique())
-      .addColumn(
-        "baseImageId",
-        "varchar",
-        (col) => col.notNull().references("images.id").onDelete("cascade"),
+      .addColumn("baseImageId", "varchar", (col) =>
+        col.notNull().references("images.id").onDelete("cascade")
       )
       .addColumn("path", "varchar", (col) => col.notNull())
-      .addColumn(
-        "createdAt",
-        "varchar",
-        (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`),
+      .addColumn("createdAt", "varchar", (col) =>
+        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
       )
       .execute();
 
@@ -296,6 +282,88 @@ migrations["011"] = {
 
   async down(db: Kysely<unknown>): Promise<void> {
     await db.schema.alterTable("virtual_machines").dropColumn("seed").execute();
+  },
+};
+
+migrations["012"] = {
+  async up(db: Kysely<unknown>): Promise<void> {
+    // make version nullable
+    await db.schema
+      .createTable("virtual_machines_new")
+      .addColumn("id", "varchar", (col) => col.primaryKey())
+      .addColumn("name", "varchar", (col) => col.notNull().unique())
+      .addColumn("bridge", "varchar")
+      .addColumn("macAddress", "varchar", (col) => col.notNull().unique())
+      .addColumn("memory", "varchar", (col) => col.notNull())
+      .addColumn("cpus", "integer", (col) => col.notNull())
+      .addColumn("cpu", "varchar", (col) => col.notNull())
+      .addColumn("diskSize", "varchar", (col) => col.notNull())
+      .addColumn("drivePath", "varchar")
+      .addColumn("version", "varchar")
+      .addColumn("diskFormat", "varchar")
+      .addColumn("isoPath", "varchar")
+      .addColumn("portForward", "varchar")
+      .addColumn("status", "varchar", (col) => col.notNull())
+      .addColumn("pid", "integer")
+      .addColumn("volume", "varchar")
+      .addColumn("seed", "varchar")
+      .addColumn("createdAt", "varchar", (col) =>
+        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+      )
+      .addColumn("updatedAt", "varchar", (col) =>
+        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+      )
+      .execute();
+
+    await sql`
+      INSERT INTO virtual_machines_new (id, name, bridge, macAddress, memory, cpus, cpu, diskSize, drivePath, version, diskFormat, isoPath, portForward, status, pid, volume, seed, createdAt, updatedAt)
+      SELECT id, name, bridge, macAddress, memory, cpus, cpu, diskSize, drivePath, version, diskFormat, isoPath, portForward, status, pid, volume, seed, createdAt, updatedAt FROM virtual_machines
+    `.execute(db);
+
+    await db.schema.dropTable("virtual_machines").execute();
+    await sql`ALTER TABLE virtual_machines_new RENAME TO virtual_machines`.execute(
+      db
+    );
+  },
+
+  async down(db: Kysely<unknown>): Promise<void> {
+    // make version not nullable
+    await db.schema
+      .createTable("virtual_machines_old")
+      .addColumn("id", "varchar", (col) => col.primaryKey())
+      .addColumn("name", "varchar", (col) => col.notNull().unique())
+      .addColumn("bridge", "varchar")
+      .addColumn("macAddress", "varchar", (col) => col.notNull().unique())
+      .addColumn("memory", "varchar", (col) => col.notNull())
+      .addColumn("cpus", "integer", (col) => col.notNull())
+      .addColumn("cpu", "varchar", (col) => col.notNull())
+      .addColumn("diskSize", "varchar", (col) => col.notNull())
+      .addColumn("drivePath", "varchar")
+      .addColumn("version", "varchar", (col) => col.notNull())
+      .addColumn("diskFormat", "varchar")
+      .addColumn("isoPath", "varchar")
+      .addColumn("portForward", "varchar")
+      .addColumn("status", "varchar", (col) => col.notNull())
+      .addColumn("pid", "integer")
+      .addColumn("volume", "varchar")
+      .addColumn("seed", "varchar")
+      .addColumn("createdAt", "varchar", (col) =>
+        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+      )
+      .addColumn("updatedAt", "varchar", (col) =>
+        col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`)
+      )
+      .execute();
+
+    await sql`
+      INSERT INTO virtual_machines_old (id, name, bridge, macAddress, memory, cpus, cpu, diskSize, drivePath, version, diskFormat, isoPath, portForward, status, pid, volume, seed, createdAt, updatedAt)
+      SELECT id, name, bridge, macAddress, memory, cpus, cpu, diskSize, drivePath, version, diskFormat, isoPath, portForward, status, pid, volume, seed, createdAt, updatedAt FROM virtual_machines
+    `.execute(db);
+
+    await db.schema.dropTable("virtual_machines").execute();
+    await sql`ALTER TABLE virtual_machines_old RENAME TO virtual_machines`.execute(
+      db
+    );
   },
 };
 
