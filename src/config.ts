@@ -2,8 +2,9 @@ import { parseFlags } from "@cliffy/flags";
 import _ from "@es-toolkit/es-toolkit/compat";
 import * as toml from "@std/toml";
 import z from "@zod/zod";
-import { Data, Effect } from "effect";
+import { Effect } from "effect";
 import { UBUNTU_ISO_URL } from "./constants.ts";
+import { VmConfigError } from "./errors.ts";
 import type { Options } from "./utils.ts";
 
 export const VmConfigSchema = z.object({
@@ -33,10 +34,6 @@ export const VmConfigSchema = z.object({
 });
 
 export type VmConfig = z.infer<typeof VmConfigSchema>;
-
-class VmConfigError extends Data.TaggedError("VmConfigError")<{
-  cause?: string;
-}> {}
 
 export const initVmFile = (
   path: string,

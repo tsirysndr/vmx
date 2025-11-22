@@ -1,14 +1,6 @@
-import { Data, Effect, pipe } from "effect";
+import { Effect, pipe } from "effect";
 import { LOGS_DIR } from "../constants.ts";
-
-class LogCommandError extends Data.TaggedError("LogCommandError")<{
-  vmName: string;
-  exitCode: number;
-}> {}
-
-class CommandError extends Data.TaggedError("CommandError")<{
-  cause?: unknown;
-}> {}
+import { CommandError, LogCommandError } from "../errors.ts";
 
 const createLogsDir = () =>
   Effect.tryPromise({
@@ -23,10 +15,7 @@ const viewLogs = (name: string, follow: boolean, logPath: string) =>
   Effect.tryPromise({
     try: async () => {
       const cmd = new Deno.Command(follow ? "tail" : "cat", {
-        args: [
-          ...(follow ? ["-n", "100", "-f"] : []),
-          logPath,
-        ],
+        args: [...(follow ? ["-n", "100", "-f"] : []), logPath],
         stdin: "inherit",
         stdout: "inherit",
         stderr: "inherit",

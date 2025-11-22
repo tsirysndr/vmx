@@ -1,8 +1,9 @@
 import _ from "@es-toolkit/es-toolkit/compat";
 import chalk from "chalk";
-import { Data, Effect, pipe } from "effect";
+import { Effect, pipe } from "effect";
 import { LOGS_DIR } from "../constants.ts";
 import type { VirtualMachine } from "../db.ts";
+import { CommandError, KillQemuError, VmNotFoundError } from "../errors.ts";
 import { getInstanceState, updateInstanceState } from "../state.ts";
 import {
   safeKillQemu,
@@ -17,18 +18,6 @@ import {
   setupRockyLinuxArgs,
   setupUbuntuArgs,
 } from "../utils.ts";
-
-class VmNotFoundError extends Data.TaggedError("VmNotFoundError")<{
-  name: string;
-}> {}
-
-class KillQemuError extends Data.TaggedError("KillQemuError")<{
-  vmName: string;
-}> {}
-
-class CommandError extends Data.TaggedError("CommandError")<{
-  cause?: unknown;
-}> {}
 
 const findVm = (name: string) =>
   pipe(

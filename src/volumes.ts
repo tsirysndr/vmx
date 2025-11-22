@@ -1,13 +1,10 @@
 import { createId } from "@paralleldrive/cuid2";
-import { Data, Effect } from "effect";
+import { Effect } from "effect";
 import type { DeleteResult, InsertResult } from "kysely";
 import { VOLUME_DIR } from "./constants.ts";
 import { ctx } from "./context.ts";
 import type { Image, Volume } from "./db.ts";
-
-export class VolumeError extends Data.TaggedError("VolumeError")<{
-  message?: unknown;
-}> {}
+import { VolumeError } from "./errors.ts";
 
 export const listVolumes = () =>
   Effect.tryPromise({

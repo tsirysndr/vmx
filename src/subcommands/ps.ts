@@ -3,16 +3,13 @@ import { basename } from "@std/path";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import utc from "dayjs/plugin/utc.js";
-import { Data, Effect, pipe } from "effect";
+import { Effect, pipe } from "effect";
 import { ctx } from "../context.ts";
 import type { VirtualMachine } from "../db.ts";
+import { DbQueryError } from "../errors.ts";
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
-
-class DbQueryError extends Data.TaggedError("DbQueryError")<{
-  cause?: unknown;
-}> {}
 
 const fetchVMs = (all: boolean) =>
   Effect.tryPromise({

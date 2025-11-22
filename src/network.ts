@@ -1,13 +1,6 @@
 import chalk from "chalk";
-import { Data, Effect } from "effect";
-
-export class NetworkError extends Data.TaggedError("NetworkError")<{
-  cause?: unknown;
-}> {}
-
-export class BridgeSetupError extends Data.TaggedError("BridgeSetupError")<{
-  cause?: unknown;
-}> {}
+import { Effect } from "effect";
+import { BridgeSetupError, NetworkError } from "./errors.ts";
 
 export const setupQemuBridge = (bridgeName: string) =>
   Effect.tryPromise({
@@ -61,9 +54,7 @@ export const setupQemuBridge = (bridgeName: string) =>
     catch: (error) => new BridgeSetupError({ cause: error }),
   });
 
-export const createBridgeNetworkIfNeeded = (
-  bridgeName: string,
-) =>
+export const createBridgeNetworkIfNeeded = (bridgeName: string) =>
   Effect.tryPromise({
     try: async () => {
       const bridgeExistsCmd = new Deno.Command("ip", {

@@ -2,7 +2,7 @@ import _ from "@es-toolkit/es-toolkit/compat";
 import { createId } from "@paralleldrive/cuid2";
 import { dirname } from "@std/path";
 import chalk from "chalk";
-import { Data, Effect, pipe } from "effect";
+import { Effect, pipe } from "effect";
 import Moniker from "moniker";
 import {
   ALMA_LINUX_IMG_URL,
@@ -25,6 +25,12 @@ import {
   UBUNTU_ISO_URL,
 } from "./constants.ts";
 import type { Image } from "./db.ts";
+import {
+  InvalidImageNameError,
+  LogCommandError,
+  NoSuchFileError,
+  NoSuchImageError,
+} from "./errors.ts";
 import { generateRandomMacAddress } from "./network.ts";
 import { saveInstanceState, updateInstanceState } from "./state.ts";
 
@@ -46,23 +52,6 @@ export interface Options {
   cloud?: boolean;
   seed?: string;
 }
-
-class LogCommandError extends Data.TaggedError("LogCommandError")<{
-  cause?: unknown;
-}> {}
-
-class InvalidImageNameError extends Data.TaggedError("InvalidImageNameError")<{
-  image: string;
-  cause?: unknown;
-}> {}
-
-class NoSuchImageError extends Data.TaggedError("NoSuchImageError")<{
-  cause: string;
-}> {}
-
-export class NoSuchFileError extends Data.TaggedError("NoSuchFileError")<{
-  cause: string;
-}> {}
 
 export const getCurrentArch = (): string => {
   switch (Deno.build.arch) {

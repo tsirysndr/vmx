@@ -4,18 +4,14 @@ import relativeTime from "dayjs/plugin/relativeTime.js";
 import utc from "dayjs/plugin/utc.js";
 import { Effect, pipe } from "effect";
 import type { Volume } from "../db.ts";
-import type { DbError } from "../mod.ts";
+import type { DbError } from "../errors.ts";
 import { deleteVolume, getVolume, listVolumes } from "../volumes.ts";
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
 
 const createTable = () =>
-  Effect.succeed(
-    new Table(
-      ["NAME", "VOLUME ID", "CREATED"],
-    ),
-  );
+  Effect.succeed(new Table(["NAME", "VOLUME ID", "CREATED"]));
 
 const populateTable = (table: Table, volumes: Volume[]) =>
   Effect.sync(() => {
