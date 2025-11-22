@@ -1,10 +1,13 @@
 # vmx
 
 [![ci](https://github.com/tsirysndr/vmx/actions/workflows/ci.yml/badge.svg)](https://github.com/tsirysndr/vmx/actions/workflows/ci.yml)
+[![JSR](https://jsr.io/badges/@tsiry/vmx)](https://jsr.io/@tsiry/vmx)
 
 A powerful command-line tool and HTTP API for managing and running headless
 virtual machines using QEMU. Built with Deno and TypeScript, vmx provides a
 Docker-like experience for VM management with OCI registry support.
+
+![Preview](./.github/assets/preview.png)
 
 ## Features
 
