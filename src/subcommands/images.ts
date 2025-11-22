@@ -13,7 +13,7 @@ dayjs.extend(utc);
 
 const createTable = () =>
   Effect.succeed(
-    new Table(["REPOSITORY", "TAG", "IMAGE ID", "CREATED", "SIZE"])
+    new Table(["REPOSITORY", "TAG", "IMAGE ID", "CREATED", "SIZE"]),
   );
 
 const populateTable = (table: Table, images: Image[]) =>
@@ -46,7 +46,7 @@ const lsEffect = () =>
     Effect.all([listImages(), createTable()]),
     Effect.flatMap(([images, table]) => populateTable(table, images)),
     Effect.flatMap(displayTable),
-    Effect.catchAll(handleError)
+    Effect.catchAll(handleError),
   );
 
 export default async function () {
