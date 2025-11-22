@@ -59,8 +59,8 @@ architecture (ARM64/x86_64) and cache for subsequent runs.
 - **Multiple Disk Formats** - Support for qcow2 and raw disk images
 - **Automatic Provisioning** - Volumes are created automatically from base
   images or attached to VMs
-- **Flexible Sizing** - Configurable disk sizes for different workloads
-  (e.g., `-s 40G`)
+- **Flexible Sizing** - Configurable disk sizes for different workloads (e.g.,
+  `-s 40G`)
 - **Volume Attachment** - Attach volumes to VMs with `-v` flag
 
 ### ☁️ Cloud-Init Support
@@ -522,7 +522,7 @@ vmx ps
 vmx alpine -m 512M -C 1
 vmx fedora-coreos 
 vmx nixos-m 4G -C 2 
-vmx rockylinux -p 2222:22 -d 
+vmx rockylinux -p 2222:22 -d
 ```
 
 ## License
