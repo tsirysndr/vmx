@@ -1,0 +1,12 @@
+*.iso
+*.img
+vmconfig.toml
+.env
+*.fd
+vmlinux
+*.tar.gz
+*.qcow2
+*.xz
+*.bu
+*.ign
+seed
