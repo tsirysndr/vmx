@@ -7,6 +7,7 @@ export type Seed = {
   metaData: {
     instanceId: string;
     localHostname: string;
+    hostname?: string;
   };
   userData: {
     users: Array<{
@@ -38,7 +39,7 @@ export const snakeCase = (obj: unknown): unknown => {
       Object.entries(obj).map(([key, value]) => [
         _.snakeCase(key),
         snakeCase(value),
-      ]),
+      ])
     );
   }
   return obj;
@@ -49,35 +50,33 @@ const createSeedDirectory = Effect.tryPromise({
   catch: (error) => new FileSystemError(error),
 });
 
-const writeMetaData = (seed: Seed) =>
+const writeMetaData = (seed: Seed, outputPath: string) =>
   Effect.tryPromise({
     try: () =>
       Deno.writeTextFile(
-        "seed/meta-data",
+        outputPath,
         stringify(snakeCase(seed.metaData), {
           flowLevel: -1,
           lineWidth: -1,
-        }),
+        })
       ),
     catch: (error) => new FileSystemError(error),
   });
 
-const writeUserData = (seed: Seed) =>
+const writeUserData = (seed: Seed, outputPath: string) =>
   Effect.tryPromise({
     try: () =>
       Deno.writeTextFile(
-        "seed/user-data",
-        `#cloud-config\n${
-          stringify(snakeCase(seed.userData), {
-            flowLevel: -1,
-            lineWidth: -1,
-          })
-        }`,
+        outputPath,
+        `#cloud-config\n${stringify(snakeCase(seed.userData), {
+          flowLevel: -1,
+          lineWidth: -1,
+        })}`
       ),
     catch: (error) => new FileSystemError(error),
   });
 
-const runXorriso = (outputPath: string) =>
+const runXorriso = (outputPath: string, seedDir: string) =>
   Effect.tryPromise({
     try: async () => {
       const xorriso = new Deno.Command("xorriso", {
@@ -90,7 +89,7 @@ const runXorriso = (outputPath: string) =>
           "cidata",
           "-J",
           "-R",
-          "seed",
+          seedDir,
         ],
         stdout: "inherit",
         stderr: "inherit",
@@ -101,11 +100,9 @@ const runXorriso = (outputPath: string) =>
       if (!status.success) {
         throw new XorrisoError(
           status.code,
-          `xorriso failed with code ${status.code}. Please ensure ${
-            chalk.green(
-              "xorriso",
-            )
-          } is installed and accessible in your PATH.`,
+          `xorriso failed with code ${status.code}. Please ensure ${chalk.green(
+            "xorriso"
+          )} is installed and accessible in your PATH.`
         );
       }
 
@@ -117,12 +114,12 @@ const runXorriso = (outputPath: string) =>
         null,
         `Unexpected error: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     },
   });
 
-const runGenisoimage = (outputPath: string) =>
+const runGenisoimage = (outputPath: string, seedDir: string) =>
   Effect.tryPromise({
     try: async () => {
       const genisoimage = new Deno.Command("genisoimage", {
@@ -133,7 +130,7 @@ const runGenisoimage = (outputPath: string) =>
           "cidata",
           "-joliet",
           "-rock",
-          "seed",
+          seedDir,
         ],
         stdout: "inherit",
         stderr: "inherit",
@@ -144,11 +141,11 @@ const runGenisoimage = (outputPath: string) =>
       if (!status.success) {
         throw new XorrisoError(
           status.code,
-          `genisoimage failed with code ${status.code}. Please ensure ${
-            chalk.green(
-              "genisoimage",
-            )
-          } is installed and accessible in your PATH.`,
+          `genisoimage failed with code ${
+            status.code
+          }. Please ensure ${chalk.green(
+            "genisoimage"
+          )} is installed and accessible in your PATH.`
         );
       }
 
@@ -160,22 +157,30 @@ const runGenisoimage = (outputPath: string) =>
         null,
         `Unexpected error: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     },
   });
 
-export const createSeedIso = (outputPath: string, seed: Seed) =>
+export const createSeedIso = (
+  outputPath: string,
+  seed: Seed,
+  seedDir: string = "seed"
+) =>
   pipe(
     createSeedDirectory,
     Effect.flatMap(() =>
-      Effect.all([writeMetaData(seed), writeUserData(seed)])
+      Effect.all([
+        writeMetaData(seed, `${seedDir}/meta-data`),
+        writeUserData(seed, `${seedDir}/user-data`),
+      ])
     ),
-    Effect.flatMap(() => Deno.build.os === "linux"
-      ? runGenisoimage(outputPath)
-      : runXorriso(outputPath)
-    ),
+    Effect.flatMap(() =>
+      Deno.build.os === "linux"
+        ? runGenisoimage(outputPath, seedDir)
+        : runXorriso(outputPath, seedDir)
+    )
   );
 
-export default (outputPath: string, seed: Seed) =>
-  Effect.runPromise(createSeedIso(outputPath, seed));
+export default (outputPath: string, seed: Seed, seedDir: string = "seed") =>
+  Effect.runPromise(createSeedIso(outputPath, seed, seedDir));
