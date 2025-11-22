@@ -1,18 +1,19 @@
 import { Data, Effect } from "effect";
 import type { Context } from "hono";
+import type { Image, Volume } from "../db.ts";
+import { VmAlreadyRunningError } from "../subcommands/start.ts";
 import {
   type CommandError,
   StopCommandError,
   VmNotFoundError,
 } from "../subcommands/stop.ts";
-import { VmAlreadyRunningError } from "../subcommands/start.ts";
 import {
   MachineParamsSchema,
   NewMachineSchema,
   NewVolumeSchema,
 } from "../types.ts";
-import type { Image, Volume } from "../db.ts";
 import { createVolume, getVolume } from "../volumes.ts";
+import { FileSystemError, XorrisoError } from "../xorriso.ts";
 import { ImageNotFoundError, RemoveRunningVmError } from "./machines.ts";
 
 export const parseQueryParams = (c: Context) => Effect.succeed(c.req.query());
@@ -36,21 +37,19 @@ export const handleError = (
     | VmAlreadyRunningError
     | ImageNotFoundError
     | RemoveRunningVmError
+    | FileSystemError
+    | XorrisoError
     | Error,
   c: Context,
 ) =>
   Effect.sync(() => {
     if (error instanceof VmNotFoundError) {
-      return c.json(
-        { message: "VM not found", code: "VM_NOT_FOUND" },
-        404,
-      );
+      return c.json({ message: "VM not found", code: "VM_NOT_FOUND" }, 404);
     }
     if (error instanceof StopCommandError) {
       return c.json(
         {
-          message: error.message ||
-            `Failed to stop VM ${error.vmName}`,
+          message: error.message || `Failed to stop VM ${error.vmName}`,
           code: "STOP_COMMAND_ERROR",
         },
         500,

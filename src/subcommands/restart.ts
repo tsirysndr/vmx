@@ -6,11 +6,15 @@ import type { VirtualMachine } from "../db.ts";
 import { getInstanceState, updateInstanceState } from "../state.ts";
 import {
   safeKillQemu,
+  setupAlmaLinuxArgs,
   setupAlpineArgs,
   setupCoreOSArgs,
   setupDebianArgs,
+  setupFedoraArgs,
   setupFirmwareFilesIfNeeded,
+  setupGentooArgs,
   setupNATNetworkArgs,
+  setupRockyLinuxArgs,
   setupUbuntuArgs,
 } from "../utils.ts";
 
@@ -63,24 +67,58 @@ const buildQemuArgs = (vm: VirtualMachine, firmwareArgs: string[]) => {
     : "qemu-system-x86_64";
 
   let coreosArgs: string[] = Effect.runSync(setupCoreOSArgs(vm.drivePath));
-  let alpineArgs: string[] = Effect.runSync(setupAlpineArgs(vm.isoPath));
-  let debianArgs: string[] = Effect.runSync(setupDebianArgs(vm.isoPath));
-  let ubuntuArgs: string[] = Effect.runSync(setupUbuntuArgs(vm.isoPath));
+  let alpineArgs: string[] = Effect.runSync(
+    setupAlpineArgs(vm.isoPath, vm.seed),
+  );
+  let debianArgs: string[] = Effect.runSync(
+    setupDebianArgs(vm.isoPath, vm.seed),
+  );
+  let ubuntuArgs: string[] = Effect.runSync(
+    setupUbuntuArgs(vm.isoPath, vm.seed),
+  );
+  let almalinuxArgs: string[] = Effect.runSync(
+    setupAlmaLinuxArgs(vm.isoPath, vm.seed),
+  );
+  let rockylinuxArgs: string[] = Effect.runSync(
+    setupRockyLinuxArgs(vm.isoPath, vm.seed),
+  );
+  let gentooArgs: string[] = Effect.runSync(
+    setupGentooArgs(vm.isoPath, vm.seed),
+  );
+  let fedoraArgs: string[] = Effect.runSync(
+    setupFedoraArgs(vm.isoPath, vm.seed),
+  );
 
   if (coreosArgs.length > 0) {
     coreosArgs = coreosArgs.slice(2);
   }
 
-  if (alpineArgs.length > 0) {
+  if (alpineArgs.length > 2) {
     alpineArgs = alpineArgs.slice(2);
   }
 
-  if (debianArgs.length > 0) {
+  if (debianArgs.length > 2) {
     debianArgs = debianArgs.slice(2);
   }
 
-  if (ubuntuArgs.length > 0) {
+  if (ubuntuArgs.length > 2) {
     ubuntuArgs = ubuntuArgs.slice(2);
+  }
+
+  if (almalinuxArgs.length > 2) {
+    almalinuxArgs = almalinuxArgs.slice(2);
+  }
+
+  if (rockylinuxArgs.length > 2) {
+    rockylinuxArgs = rockylinuxArgs.slice(2);
+  }
+
+  if (gentooArgs.length > 2) {
+    gentooArgs = gentooArgs.slice(2);
+  }
+
+  if (fedoraArgs.length > 2) {
+    fedoraArgs = fedoraArgs.slice(2);
   }
 
   return Effect.succeed([
@@ -118,6 +156,12 @@ const buildQemuArgs = (vm: VirtualMachine, firmwareArgs: string[]) => {
     ...alpineArgs,
     ...debianArgs,
     ...ubuntuArgs,
+    ...almalinuxArgs,
+    ...rockylinuxArgs,
+    ...gentooArgs,
+    ...fedoraArgs,
+    ...(vm.seed ? ["-drive", `if=virtio,file=${vm.seed},media=cdrom`] : []),
+    ...(vm.volume ? [] : ["-snapshot"]),
   ]);
 };
 

@@ -12,6 +12,7 @@ import {
   DEBIAN_DEFAULT_VERSION,
   DEBIAN_ISO_URL,
   EMPTY_DISK_THRESHOLD_KB,
+  FEDORA_CLOUD_IMG_URL,
   FEDORA_COREOS_DEFAULT_VERSION,
   FEDORA_COREOS_IMG_URL,
   FEDORA_IMG_URL,
@@ -43,6 +44,7 @@ export interface Options {
   install?: boolean;
   volume?: string;
   cloud?: boolean;
+  seed?: string;
 }
 
 class LogCommandError extends Data.TaggedError("LogCommandError")<{
@@ -214,7 +216,13 @@ export const downloadIso = (url: string, options: Options) =>
 
     yield* Effect.tryPromise({
       try: async () => {
-        console.log(chalk.blueBright(`Downloading ISO from ${url}...`));
+        console.log(
+          chalk.blueBright(
+            `Downloading ${
+              url.endsWith(".iso") ? "ISO" : "image"
+            } from ${url}...`,
+          ),
+        );
         const cmd = new Deno.Command("curl", {
           args: ["-L", "-o", outputPath, url],
           stdin: "inherit",
@@ -337,20 +345,25 @@ export const setupCoreOSArgs = (imagePath?: string | null) =>
     return [];
   });
 
-export const setupFedoraArgs = (imagePath?: string | null) =>
+export const setupFedoraArgs = (imagePath?: string | null, seed?: string) =>
   Effect.sync(() => {
     if (
       imagePath &&
       imagePath.endsWith(".qcow2") &&
-      imagePath.includes("Fedora-Server")
+      (imagePath.includes("Fedora-Server") ||
+        imagePath.includes("Fedora-Cloud"))
     ) {
-      return ["-drive", `file=${imagePath},format=qcow2,if=virtio`];
+      return [
+        "-drive",
+        `file=${imagePath},format=qcow2,if=virtio`,
+        ...(seed ? ["-drive", `if=virtio,file=${seed},media=cdrom`] : []),
+      ];
     }
 
     return [];
   });
 
-export const setupGentooArgs = (imagePath?: string | null) =>
+export const setupGentooArgs = (imagePath?: string | null, seed?: string) =>
   Effect.sync(() => {
     if (
       imagePath &&
@@ -359,13 +372,20 @@ export const setupGentooArgs = (imagePath?: string | null) =>
         `di-${Deno.build.arch === "aarch64" ? "arm64" : "amd64"}-console-`,
       )
     ) {
-      return ["-drive", `file=${imagePath},format=qcow2,if=virtio`];
+      return [
+        "-drive",
+        `file=${imagePath},format=qcow2,if=virtio`,
+        ...(seed ? ["-drive", `if=virtio,file=${seed},media=cdrom`] : []),
+      ];
     }
 
     return [];
   });
 
-export const setupAlpineArgs = (imagePath?: string | null) =>
+export const setupAlpineArgs = (
+  imagePath?: string | null,
+  seed: string = "seed.iso",
+) =>
   Effect.sync(() => {
     if (
       imagePath &&
@@ -376,14 +396,17 @@ export const setupAlpineArgs = (imagePath?: string | null) =>
         "-drive",
         `file=${imagePath},format=qcow2,if=virtio`,
         "-drive",
-        "if=virtio,file=seed.iso,media=cdrom",
+        `if=virtio,file=${seed},media=cdrom`,
       ];
     }
 
     return [];
   });
 
-export const setupDebianArgs = (imagePath?: string | null) =>
+export const setupDebianArgs = (
+  imagePath?: string | null,
+  seed: string = "seed.iso",
+) =>
   Effect.sync(() => {
     if (
       imagePath &&
@@ -394,14 +417,17 @@ export const setupDebianArgs = (imagePath?: string | null) =>
         "-drive",
         `file=${imagePath},format=qcow2,if=virtio`,
         "-drive",
-        "if=virtio,file=seed.iso,media=cdrom",
+        `if=virtio,file=${seed},media=cdrom`,
       ];
     }
 
     return [];
   });
 
-export const setupUbuntuArgs = (imagePath?: string | null) =>
+export const setupUbuntuArgs = (
+  imagePath?: string | null,
+  seed: string = "seed.iso",
+) =>
   Effect.sync(() => {
     if (
       imagePath &&
@@ -412,14 +438,17 @@ export const setupUbuntuArgs = (imagePath?: string | null) =>
         "-drive",
         `file=${imagePath},format=qcow2,if=virtio`,
         "-drive",
-        "if=virtio,file=seed.iso,media=cdrom",
+        `if=virtio,file=${seed},media=cdrom`,
       ];
     }
 
     return [];
   });
 
-export const setupAlmaLinuxArgs = (imagePath?: string | null) =>
+export const setupAlmaLinuxArgs = (
+  imagePath?: string | null,
+  seed: string = "seed.iso",
+) =>
   Effect.sync(() => {
     if (
       imagePath &&
@@ -430,14 +459,17 @@ export const setupAlmaLinuxArgs = (imagePath?: string | null) =>
         "-drive",
         `file=${imagePath},format=qcow2,if=virtio`,
         "-drive",
-        "if=virtio,file=seed.iso,media=cdrom",
+        `if=virtio,file=${seed},media=cdrom`,
       ];
     }
 
     return [];
   });
 
-export const setupRockyLinuxArgs = (imagePath?: string | null) =>
+export const setupRockyLinuxArgs = (
+  imagePath?: string | null,
+  seed: string = "seed.iso",
+) =>
   Effect.sync(() => {
     if (
       imagePath &&
@@ -448,7 +480,7 @@ export const setupRockyLinuxArgs = (imagePath?: string | null) =>
         "-drive",
         `file=${imagePath},format=qcow2,if=virtio`,
         "-drive",
-        "if=virtio,file=seed.iso,media=cdrom",
+        `if=virtio,file=${seed},media=cdrom`,
       ];
     }
 
@@ -465,16 +497,33 @@ export const runQemu = (isoPath: string | null, options: Options) =>
 
     const firmwareFiles = yield* setupFirmwareFilesIfNeeded();
     let coreosArgs: string[] = yield* setupCoreOSArgs(isoPath || options.image);
-    let fedoraArgs: string[] = yield* setupFedoraArgs(isoPath || options.image);
-    let gentooArgs: string[] = yield* setupGentooArgs(isoPath || options.image);
-    let alpineArgs: string[] = yield* setupAlpineArgs(isoPath || options.image);
-    let debianArgs: string[] = yield* setupDebianArgs(isoPath || options.image);
-    let ubuntuArgs: string[] = yield* setupUbuntuArgs(isoPath || options.image);
+    let fedoraArgs: string[] = yield* setupFedoraArgs(
+      isoPath || options.image,
+      options.seed,
+    );
+    let gentooArgs: string[] = yield* setupGentooArgs(
+      isoPath || options.image,
+      options.seed,
+    );
+    let alpineArgs: string[] = yield* setupAlpineArgs(
+      isoPath || options.image,
+      options.seed,
+    );
+    let debianArgs: string[] = yield* setupDebianArgs(
+      isoPath || options.image,
+      options.seed,
+    );
+    let ubuntuArgs: string[] = yield* setupUbuntuArgs(
+      isoPath || options.image,
+      options.seed,
+    );
     let almalinuxArgs: string[] = yield* setupAlmaLinuxArgs(
       isoPath || options.image,
+      options.seed,
     );
     let rockylinuxArgs: string[] = yield* setupRockyLinuxArgs(
       isoPath || options.image,
+      options.seed,
     );
 
     if (coreosArgs.length > 0 && !isoPath) {
@@ -608,6 +657,7 @@ export const runQemu = (isoPath: string | null, options: Options) =>
         version: DEFAULT_VERSION,
         status: "RUNNING",
         pid: qemuPid,
+        seed: options.seed,
       });
 
       console.log(
@@ -650,6 +700,7 @@ export const runQemu = (isoPath: string | null, options: Options) =>
         version: DEFAULT_VERSION,
         status: "RUNNING",
         pid: cmd.pid,
+        seed: options.seed ? Deno.realPathSync(options.seed) : undefined,
       });
 
       const status = yield* Effect.tryPromise({
@@ -845,12 +896,13 @@ export const constructNixOSImageURL = (
 
 export const constructFedoraImageURL = (
   image: string,
+  cloud: boolean = false,
 ): Effect.Effect<string, InvalidImageNameError, never> => {
   // detect with regex if image matches Fedora pattern: fedora
   const fedoraRegex = /^(fedora)$/;
   const match = image.match(fedoraRegex);
   if (match) {
-    return Effect.succeed(FEDORA_IMG_URL);
+    return Effect.succeed(cloud ? FEDORA_CLOUD_IMG_URL : FEDORA_IMG_URL);
   }
 
   return Effect.fail(

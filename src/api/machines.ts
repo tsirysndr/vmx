@@ -1,7 +1,9 @@
+import _ from "@es-toolkit/es-toolkit/compat";
 import { createId } from "@paralleldrive/cuid2";
 import { Data, Effect, pipe } from "effect";
 import { Hono } from "hono";
 import Moniker from "moniker";
+import { SEED_DIR } from "../constants.ts";
 import { getImage } from "../images.ts";
 import { DEFAULT_VERSION, getInstanceState } from "../mod.ts";
 import { generateRandomMacAddress } from "../network.ts";
@@ -20,6 +22,7 @@ import {
 import { findVm, killProcess, updateToStopped } from "../subcommands/stop.ts";
 import type { NewMachine } from "../types.ts";
 import { getVolume } from "../volumes.ts";
+import { createSeedIso } from "../xorriso.ts";
 import {
   createVolumeIfNeeded,
   handleError,
@@ -70,24 +73,59 @@ app.post("/", (c) =>
             ? yield* createVolumeIfNeeded(image, params.volume)
             : undefined;
 
+          const name = Moniker.choose();
+          if (params.users) {
+            const [tempDir] = yield* Effect.promise(() =>
+              Promise.all([
+                Deno.makeTempDir(),
+                Deno.mkdir(SEED_DIR, { recursive: true }),
+              ])
+            );
+            yield* createSeedIso(
+              `${SEED_DIR}/seed-${name}.iso`,
+              {
+                metaData: {
+                  instanceId: params.instanceId || name,
+                  localHostname: params.localHostname || name,
+                  hostname: params.hostname || name,
+                },
+                userData: {
+                  users: params.users.map((user) => ({
+                    name: user.name,
+                    shell: user.shell,
+                    sudo: user.sudo,
+                    sshAuthorizedKeys: user.sshAuthorizedKeys || [],
+                  })),
+                  sshPwauth: false,
+                },
+              },
+              tempDir,
+            );
+          }
+
           const macAddress = yield* generateRandomMacAddress();
           const id = createId();
           yield* saveInstanceState({
             id,
-            name: Moniker.choose(),
+            name,
             bridge: params.bridge,
             macAddress,
             memory: params.memory || "2G",
             cpus: params.cpus || 8,
             cpu: params.cpu || "host",
             diskSize: "20G",
-            diskFormat: volume ? "qcow2" : "raw",
+            diskFormat: volume ? "qcow2" : image.format,
             portForward: params.portForward
               ? params.portForward.join(",")
               : undefined,
             drivePath: volume ? volume.path : image.path,
             version: image.tag ?? DEFAULT_VERSION,
             status: "STOPPED",
+            seed: _.get(
+              params,
+              "seed",
+              params.users ? `${SEED_DIR}/seed-${name}.iso` : undefined,
+            ),
             pid: 0,
           });
 
