@@ -106,6 +106,10 @@ if (import.meta.main) {
       "--cloud",
       "Use cloud-init for initial configuration (only for compatible images)",
     )
+    .option(
+      "--seed <path:string>",
+      "Path to cloud-init seed image (ISO format)",
+    )
     .example(
       "Create a default VM configuration file",
       "vmx init",
@@ -145,6 +149,23 @@ if (import.meta.main) {
     .action(async (options: Options, input?: string) => {
       const program = Effect.gen(function* () {
         let isoPath: string | null = null;
+
+        if (options.seed) {
+          const seedExists = yield* pipe(
+            fileExists(options.seed),
+            Effect.map(() => true),
+            Effect.catchAll(() => Effect.succeed(false)),
+          );
+          if (!seedExists) {
+            console.error(`Seed file ${options.seed} does not exist.`);
+            console.log(
+              `Please run ${
+                chalk.greenBright(`vmx seed`)
+              } to create a seed image.`,
+            );
+            Deno.exit(1);
+          }
+        }
 
         if (input) {
           const [image, archivePath] = yield* Effect.all([
@@ -221,7 +242,7 @@ if (import.meta.main) {
           }
 
           const fedoraImageURL = yield* pipe(
-            constructFedoraImageURL(input),
+            constructFedoraImageURL(input, options.cloud),
             Effect.catchAll(() => Effect.succeed(null)),
           );
 
@@ -469,6 +490,10 @@ if (import.meta.main) {
       "-v, --volume <name:string>",
       "Name of the volume to attach to the VM, will be created if it doesn't exist",
     )
+    .option(
+      "--seed <path:string>",
+      "Path to cloud-init seed image (ISO format)",
+    )
     .action(async (options: unknown, vmName: string) => {
       await start(vmName, Boolean((options as { detach: boolean }).detach));
     })
@@ -607,6 +632,10 @@ if (import.meta.main) {
       "-s, --size <size:string>",
       "Size of the volume to create if it doesn't exist (e.g., 20G)",
     )
+    .option(
+      "--seed <path:string>",
+      "Path to cloud-init seed image (ISO format)",
+    )
     .action(async (_options: unknown, image: string) => {
       await run(image);
     })
@@ -638,8 +667,9 @@ if (import.meta.main) {
       "seed",
       "Seed initial cloud-init user-data and meta-data files for the VM",
     )
-    .action(async () => {
-      await seed();
+    .arguments("[path:string]")
+    .action(async (_options: unknown, path?: string) => {
+      await seed(path);
     })
     .parse(Deno.args);
 }

@@ -3,8 +3,8 @@ import _ from "@es-toolkit/es-toolkit/compat";
 import * as toml from "@std/toml";
 import z from "@zod/zod";
 import { Data, Effect } from "effect";
-import type { Options } from "./utils.ts";
 import { UBUNTU_ISO_URL } from "./constants.ts";
+import type { Options } from "./utils.ts";
 
 export const VmConfigSchema = z.object({
   vm: z
@@ -124,5 +124,7 @@ export const mergeConfig = (
     bridge: _.get(flags, "bridge", defaultConfig.network.bridge!) as string,
     size: _.get(flags, "size", defaultConfig.vm.size!) as string,
     install: flags.install,
+    detach: flags.detach || defaultConfig.options.detach!,
+    seed: _.get(flags, "seed", options.seed) as string | undefined,
   });
 };

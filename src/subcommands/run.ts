@@ -92,5 +92,6 @@ function mergeFlags(image: Image): Options {
     install: false,
     diskFormat: image.format,
     volume: flags.volume || flags.v,
+    seed: flags.seed ? Deno.realPathSync(flags.seed) : undefined,
   };
 }

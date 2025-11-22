@@ -77,101 +77,105 @@ const writeUserData = (seed: Seed) =>
     catch: (error) => new FileSystemError(error),
   });
 
-const runXorriso = Effect.tryPromise({
-  try: async () => {
-    const xorriso = new Deno.Command("xorriso", {
-      args: [
-        "-as",
-        "mkisofs",
-        "-o",
-        "seed.iso",
-        "-V",
-        "cidata",
-        "-J",
-        "-R",
-        "seed",
-      ],
-      stdout: "inherit",
-      stderr: "inherit",
-    }).spawn();
+const runXorriso = (outputPath: string) =>
+  Effect.tryPromise({
+    try: async () => {
+      const xorriso = new Deno.Command("xorriso", {
+        args: [
+          "-as",
+          "mkisofs",
+          "-o",
+          outputPath,
+          "-V",
+          "cidata",
+          "-J",
+          "-R",
+          "seed",
+        ],
+        stdout: "inherit",
+        stderr: "inherit",
+      }).spawn();
 
-    const status = await xorriso.status;
+      const status = await xorriso.status;
 
-    if (!status.success) {
-      throw new XorrisoError(
-        status.code,
-        `xorriso failed with code ${status.code}. Please ensure ${
-          chalk.green(
-            "xorriso",
-          )
-        } is installed and accessible in your PATH.`,
+      if (!status.success) {
+        throw new XorrisoError(
+          status.code,
+          `xorriso failed with code ${status.code}. Please ensure ${
+            chalk.green(
+              "xorriso",
+            )
+          } is installed and accessible in your PATH.`,
+        );
+      }
+
+      return status;
+    },
+    catch: (error) => {
+      if (error instanceof XorrisoError) return error;
+      return new XorrisoError(
+        null,
+        `Unexpected error: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       );
-    }
+    },
+  });
 
-    return status;
-  },
-  catch: (error) => {
-    if (error instanceof XorrisoError) return error;
-    return new XorrisoError(
-      null,
-      `Unexpected error: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    );
-  },
-});
+const runGenisoimage = (outputPath: string) =>
+  Effect.tryPromise({
+    try: async () => {
+      const genisoimage = new Deno.Command("genisoimage", {
+        args: [
+          "-output",
+          outputPath,
+          "-volid",
+          "cidata",
+          "-joliet",
+          "-rock",
+          "seed",
+        ],
+        stdout: "inherit",
+        stderr: "inherit",
+      }).spawn();
 
-const runGenisoimage = Effect.tryPromise({
-  try: async () => {
-    const genisoimage = new Deno.Command("genisoimage", {
-      args: [
-        "-output",
-        "seed.iso",
-        "-volid",
-        "cidata",
-        "-joliet",
-        "-rock",
-        "seed",
-      ],
-      stdout: "inherit",
-      stderr: "inherit",
-    }).spawn();
+      const status = await genisoimage.status;
 
-    const status = await genisoimage.status;
+      if (!status.success) {
+        throw new XorrisoError(
+          status.code,
+          `genisoimage failed with code ${status.code}. Please ensure ${
+            chalk.green(
+              "genisoimage",
+            )
+          } is installed and accessible in your PATH.`,
+        );
+      }
 
-    if (!status.success) {
-      throw new XorrisoError(
-        status.code,
-        `genisoimage failed with code ${status.code}. Please ensure ${
-          chalk.green(
-            "genisoimage",
-          )
-        } is installed and accessible in your PATH.`,
+      return status;
+    },
+    catch: (error) => {
+      if (error instanceof XorrisoError) return error;
+      return new XorrisoError(
+        null,
+        `Unexpected error: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       );
-    }
+    },
+  });
 
-    return status;
-  },
-  catch: (error) => {
-    if (error instanceof XorrisoError) return error;
-    return new XorrisoError(
-      null,
-      `Unexpected error: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    );
-  },
-});
-
-export const createSeedIso = (seed: Seed) =>
+export const createSeedIso = (outputPath: string, seed: Seed) =>
   pipe(
     createSeedDirectory,
     Effect.flatMap(() =>
       Effect.all([writeMetaData(seed), writeUserData(seed)])
     ),
-    Effect.flatMap(() =>
-      Deno.build.os === "linux" ? runGenisoimage : runXorriso
+    Effect.flatMap(() => Deno.build.os === "linux"
+      ? runGenisoimage(outputPath)
+      : runXorriso(outputPath)
     ),
   );
 
-export default (seed: Seed) => Effect.runPromise(createSeedIso(seed));
+export default (outputPath: string, seed: Seed) =>
+  Effect.runPromise(createSeedIso(outputPath, seed));

@@ -88,6 +88,7 @@ app.post("/", (c) =>
             drivePath: volume ? volume.path : image.path,
             version: image.tag ?? DEFAULT_VERSION,
             status: "STOPPED",
+            seed: params.seed,
             pid: 0,
           });
 

@@ -95,10 +95,7 @@ migrations["004"] = {
   },
 
   async down(db: Kysely<unknown>): Promise<void> {
-    await db.schema
-      .alterTable("images")
-      .dropColumn("format")
-      .execute();
+    await db.schema.alterTable("images").dropColumn("format").execute();
   },
 };
 
@@ -211,10 +208,7 @@ migrations["007"] = {
       .execute();
   },
   async down(db: Kysely<unknown>): Promise<void> {
-    await db.schema
-      .alterTable("images")
-      .dropColumn("digest")
-      .execute();
+    await db.schema.alterTable("images").dropColumn("digest").execute();
   },
 };
 
@@ -289,6 +283,19 @@ migrations["010"] = {
       .alterTable("virtual_machines")
       .dropColumn("volume")
       .execute();
+  },
+};
+
+migrations["011"] = {
+  async up(db: Kysely<unknown>): Promise<void> {
+    await db.schema
+      .alterTable("virtual_machines")
+      .addColumn("seed", "varchar")
+      .execute();
+  },
+
+  async down(db: Kysely<unknown>): Promise<void> {
+    await db.schema.alterTable("virtual_machines").dropColumn("seed").execute();
   },
 };
 

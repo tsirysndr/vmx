@@ -36,6 +36,7 @@ export type VirtualMachine = {
   status: STATUS;
   pid: number;
   volume?: string;
+  seed?: string;
   createdAt?: string;
   updatedAt?: string;
 };

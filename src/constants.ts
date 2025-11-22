@@ -21,6 +21,10 @@ export const NIXOS_ISO_URL: string =
 export const FEDORA_IMG_URL: string =
   `https://download.fedoraproject.org/pub/fedora/linux/releases/43/Server/${Deno.build.arch}/images/Fedora-Server-Guest-Generic-43-1.6.${Deno.build.arch}.qcow2`;
 
+export const FEDORA_CLOUD_IMG_URL: string = Deno.build.arch === "aarch64"
+  ? "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-43-1.6.aarch64.qcow2"
+  : "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2";
+
 export const GENTOO_IMG_URL: string = Deno.build.arch === "aarch64"
   ? "https://distfiles.gentoo.org/releases/arm64/autobuilds/20251116T233105Z/di-arm64-console-20251116T233105Z.qcow2"
   : "https://distfiles.gentoo.org/releases/amd64/autobuilds/20251116T161545Z/di-amd64-console-20251116T161545Z.qcow2";
