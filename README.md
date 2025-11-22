@@ -13,8 +13,8 @@ Docker-like experience for VM management with OCI registry support.
 - **Headless VM Management** - Run VMs in the background without GUI overhead
 - **QEMU Integration** - Leverages QEMU for robust virtualization on both x86_64
   and ARM64 architectures
-- **Docker-like CLI** - Familiar commands for VM lifecycle management (run,
-  start, stop, ps, rm, etc.)
+- **Docker-like CLI** - Familiar commands for VM lifecycle management (`run`,
+  `start`, `stop`, `ps`, `rm`, `logs`, `inspect`, etc.)
 - **Configuration Files** - TOML-based configuration for reproducible VM setups
 - **Multiple Input Sources** - Boot from local ISOs, remote URLs, or OCI
   registry images
@@ -24,42 +24,81 @@ Docker-like experience for VM management with OCI registry support.
 - **Pull & Push** - Store and retrieve VM images from OCI-compliant registries
   (GitHub Container Registry, Docker Hub, etc.)
 - **Image Management** - List, tag, and remove local VM images
-- **Authentication** - Secure login/logout for private registries
+- **Authentication** - Secure login/logout for private registries with password
+  from stdin or interactive prompt
 - **Cross-platform** - Automatic architecture detection and handling
   (amd64/arm64)
+
+### 🐧 Quick Start Linux Distributions
+
+- **Ubuntu** - Quick shortcuts like `vmx ubuntu` with automatic download
+- **Debian** - Support for `vmx debian` with cloud-init ready images
+- **Fedora** - Run `vmx fedora:43` with CoreOS and Server editions
+- **Alpine Linux** - Lightweight `vmx alpine` for minimal setups
+- **AlmaLinux** - Enterprise-ready with `vmx alma`
+- **Rocky Linux** - RHEL-compatible via `vmx rocky`
+- **NixOS** - Declarative systems with `vmx nixos`
+- **Gentoo** - Source-based distributions with `vmx gentoo`
+- **Fedora CoreOS** - Container-optimized OS with automatic version detection
+
+All distributions automatically download the appropriate image for your
+architecture (ARM64/x86_64) and cache for subsequent runs.
 
 ### 🌐 Networking
 
 - **Bridge Networking** - Create and manage network bridges for VM connectivity
 - **Port Forwarding** - Easy SSH and service access with flexible port mapping
+  (e.g., `-p 2222:22,8080:80`)
 - **Multiple Network Modes** - Support for various QEMU networking
   configurations
+- **Automatic Bridge Setup** - Creates network bridges automatically when needed
 
 ### 💾 Storage & Volumes
 
 - **Volume Management** - Create, list, inspect, and delete persistent volumes
 - **Multiple Disk Formats** - Support for qcow2 and raw disk images
 - **Automatic Provisioning** - Volumes are created automatically from base
-  images
+  images or attached to VMs
 - **Flexible Sizing** - Configurable disk sizes for different workloads
+  (e.g., `-s 40G`)
+- **Volume Attachment** - Attach volumes to VMs with `-v` flag
+
+### ☁️ Cloud-Init Support
+
+- **Seed Image Creation** - Interactive `vmx seed` command to generate
+  cloud-init configuration
+- **User Data & Meta Data** - Full support for cloud-init user-data and
+  meta-data
+- **SSH Key Injection** - Automatically configure SSH authorized keys
+- **Custom User Setup** - Define default user, shell, and sudo permissions
+- **Instance Configuration** - Set hostname and instance ID for cloud
+  environments
 
 ### 🔧 Advanced Features
 
-- **Detached Mode** - Run VMs in the background as daemon processes
-- **Live Logs** - Stream VM output and follow logs in real-time
+- **Detached Mode** - Run VMs in the background as daemon processes with `-d`
+  flag
+- **Live Logs** - Stream VM output and follow logs in real-time with `-f` flag
 - **VM Inspection** - Detailed information about running and stopped VMs
-- **Resource Configuration** - Customizable CPU, memory, and disk settings
+- **Resource Configuration** - Customizable CPU (type and cores), memory, and
+  disk settings
 - **ARM64 & x86_64 Support** - Native support for both architectures with UEFI
   firmware
+- **Install Mode** - Persist changes to VM disk image with `--install` flag
+- **Automatic Caching** - Downloaded ISOs and images are cached locally for
+  faster subsequent runs
 
 ### 🌍 HTTP API
 
 - **RESTful API** - Full-featured HTTP API for programmatic VM management
 - **Bearer Authentication** - Secure API access with token-based auth
+  (auto-generated or custom via `VMX_API_TOKEN`)
 - **Machines Endpoint** - Create, start, stop, restart, and remove VMs via API
 - **Images Endpoint** - List and query VM images
-- **Volumes Endpoint** - Manage persistent storage volumes
+- **Volumes Endpoint** - Create, list, inspect, and delete persistent volumes
 - **CORS Support** - Cross-origin requests for web-based tools
+- **Custom Port** - Configure API server port with `--port` flag or
+  `VMX_API_PORT` env var
 
 ## Installation
 
@@ -99,6 +138,39 @@ vmx https://cdimage.ubuntu.com/releases/24.04/release/ubuntu-24.04.3-live-server
 # From OCI registry
 vmx ghcr.io/tsirysndr/ubuntu:24.04
 ```
+
+### Quick Start with Linux Distributions
+
+Use distribution shortcuts to quickly spin up VMs:
+
+```bash
+# Ubuntu
+vmx ubuntu
+
+# Debian  
+vmx debian
+
+# Fedora
+vmx fedora
+vmx fedora-coreos
+
+# Alpine Linux
+vmx alpine
+
+# AlmaLinux
+vmx alma
+
+# Rocky Linux
+vmx rocky
+# NixOS
+vmx nixos
+
+# Gentoo
+vmx gentoo
+```
+
+These shortcuts automatically download the appropriate cloud-ready or
+installation images for your architecture (ARM64 or x86_64).
 
 ### Pull and Run from Registry
 
@@ -185,13 +257,37 @@ vmx logout ghcr.io
 vmx volumes
 
 # Create and attach a volume to VM
-vmx run ubuntu:24.04 -v my-data
+vmx run ubuntu -v my-data
+
+# Create volume with custom size
+vmx run ubuntu -v my-data -s 50G
 
 # Inspect a volume
 vmx volume inspect my-data
 
 # Remove a volume
 vmx volume rm my-data
+```
+
+### Cloud-Init Configuration
+
+```bash
+# Create a cloud-init seed image interactively
+vmx seed
+
+# Create with custom output path
+vmx seed my-seed.iso
+
+# Run VM with cloud-init seed
+vmx ubuntu --cloud --seed seed.iso
+
+# The seed command will prompt for:
+# - Instance ID
+# - Hostname
+# - Default username
+# - User shell
+# - Sudo permissions
+# - SSH authorized keys
 ```
 
 ### Advanced Options
@@ -204,17 +300,26 @@ vmx run ubuntu:24.04 \
   --memory 4G \
   --detach
 
-# With port forwarding (SSH on port 2222)
-vmx run ubuntu:24.04 -p 2222:22
+# With multiple port forwards (SSH and HTTP)
+vmx run ubuntu:24.04 -p 2222:22,8080:80
 
 # With bridge networking
 vmx run ubuntu:24.04 --bridge br0
 
-# With persistent disk
-vmx run ubuntu:24.04 \
+# With persistent disk and install mode
+vmx ubuntu:24.04 \
   --image /path/to/disk.img \
   --size 40G \
-  --disk-format qcow2
+  --disk-format qcow2 \
+  --install
+
+# With cloud-init and volume
+vmx run ubuntu:24.04 \
+  --cloud \
+  --seed seed.iso \
+  -v data \
+  -s 50G \
+  -d
 ```
 
 ## Configuration File
@@ -282,7 +387,25 @@ vmx serve
 
 ### API Authentication
 
-All API requests require a Bearer token:
+All API requests require a Bearer token. The token is auto-generated on first
+run or can be set via the `VMX_API_TOKEN` environment variable:
+
+```bash
+# Auto-generated token (displayed on startup)
+vmx serve
+
+# Custom token
+export VMX_API_TOKEN=your-secret-token
+vmx serve
+
+# Custom port
+vmx serve --port 3000
+# or
+export VMX_API_PORT=3000
+vmx serve
+```
+
+API requests using the Bearer token:
 
 ```bash
 curl -H "Authorization: Bearer your-token" http://localhost:8889/machines
@@ -299,7 +422,8 @@ curl -X POST http://localhost:8889/machines \
     "image": "ubuntu:24.04",
     "memory": "4G",
     "cpus": 4,
-    "portForward": ["2222:22"]
+    "portForward": ["2222:22"],
+    "volume": "data"
   }'
 
 # Start a machine
@@ -309,6 +433,15 @@ curl -X POST http://localhost:8889/machines/{id}/start \
 # List all machines
 curl http://localhost:8889/machines \
   -H "Authorization: Bearer your-token"
+
+# Create a volume
+curl -X POST http://localhost:8889/volumes \
+  -H "Authorization: Bearer your-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "data",
+    "size": "50G"
+  }'
 ```
 
 ## Architecture Support
@@ -324,15 +457,31 @@ vmx automatically detects and adapts to your system architecture:
 ### Development Environment
 
 ```bash
-# Initialize configuration
+# Quick start with Ubuntu
+vmx ubuntu:24.04
+
+# Or initialize with custom configuration
 vmx init
 
 # Edit vmconfig.toml to your needs
 # Then start the VM
 vmx
 
-# SSH into the VM (port forwarding configured)
+# SSH into the VM (with port forwarding configured)
 ssh -p 2222 user@localhost
+```
+
+### Cloud-Init Setup
+
+```bash
+# Create a cloud-init seed image
+vmx seed
+
+# Run Ubuntu with cloud-init
+vmx ubuntu --cloud --seed seed.iso -p 2222:22 -d
+
+# Wait for VM to boot and SSH in
+ssh -p 2222 ubuntu@localhost
 ```
 
 ### CI/CD Integration
@@ -341,25 +490,39 @@ ssh -p 2222 user@localhost
 # Pull a pre-configured image
 vmx pull ghcr.io/company/test-env:latest
 
-# Run tests in detached mode
-vmx run ghcr.io/company/test-env:latest -d
+# Run tests in detached mode with volume for results
+vmx run ghcr.io/company/test-env:latest -d -v test-results
 
 # Execute tests and cleanup
 vmx stop test-vm
 vmx rm test-vm
+vmx volume rm test-results
 ```
 
 ### Multi-VM Setup
 
 ```bash
-# Start database VM
-vmx run postgres:14 -d -p 5432:5432 -v pgdata
+# Start database VM with persistent storage
+vmx run postgres -d -p 5432:5432 -v pgdata -s 20G
 
-# Start application VM
-vmx run app:latest -d -p 8080:8080
+# Start application VM with bridge networking
+vmx run app -d -p 8080:8080 --bridge br0
+
+# Start cache VM
+vmx run redis -d -p 6379:6379
 
 # List all running VMs
 vmx ps
+```
+
+### Quick Distribution Testing
+
+```bash
+# Test different distributions
+vmx alpine -m 512M -C 1
+vmx fedora-coreos 
+vmx nixos-m 4G -C 2 
+vmx rockylinux -p 2222:22 -d 
 ```
 
 ## License
