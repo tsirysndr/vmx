@@ -39,7 +39,7 @@ const createTable = () =>
       "BRIDGE",
       "PORTS",
       "CREATED",
-    ])
+    ]),
   );
 
 const ellipsis = (str: string, maxLength: number) =>
@@ -79,7 +79,7 @@ const psEffect = (all: boolean) =>
     Effect.all([fetchVMs(all), createTable()]),
     Effect.flatMap(([vms, table]) => populateTable(table, vms)),
     Effect.flatMap(displayTable),
-    Effect.catchAll(handleError)
+    Effect.catchAll(handleError),
   );
 
 export default async function (all: boolean) {
@@ -89,11 +89,13 @@ export default async function (all: boolean) {
 function formatStatus(vm: VirtualMachine) {
   switch (vm.status) {
     case "RUNNING":
-      return `Up ${dayjs
-        .utc(vm.updatedAt)
-        .local()
-        .fromNow()
-        .replace("ago", "")}`;
+      return `Up ${
+        dayjs
+          .utc(vm.updatedAt)
+          .local()
+          .fromNow()
+          .replace("ago", "")
+      }`;
     case "STOPPED":
       return `Exited ${dayjs.utc(vm.updatedAt).local().fromNow()}`;
     default:
