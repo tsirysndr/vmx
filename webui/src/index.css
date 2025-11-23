@@ -1,0 +1,36 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap");
+
+@import "tailwindcss";
+@tailwind utilities;
+@plugin "@iconify/tailwind4";
+@plugin "flyonui" {
+  themes:
+    light --preferslight,
+    dark --default;
+}
+@source "./node_modules/flyonui/dist/index.js";
+
+body {
+  font-family: "Roboto Mono", monospace;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  height: 100vh;
+  margin: 0;
+  font-size: 14px;
+}
+
+* {
+  color: inherit;
+}
+
+:root {
+  --color-background: #ffffff;
+  --color-text: #000000;
+  --color-border: #000000;
+}
+
+.dark {
+  --color-background: #130826;
+  --color-text: #d6d6d6;
+  --color-border: #1f192a;
+}
