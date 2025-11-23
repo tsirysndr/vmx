@@ -17,7 +17,9 @@ async function main() {
   // Test case 3: Very large numbers
   const result3 = await add(1000000n, 2000000n);
   console.log(`add(1000000, 2000000) = ${result3}`);
-  console.log(`Expected: 3000000, Got: ${result3}, Pass: ${result3 === 3000000n}\n`);
+  console.log(
+    `Expected: 3000000, Got: ${result3}, Pass: ${result3 === 3000000n}\n`,
+  );
 
   // Test case 4: Zero
   const result4 = await add(0n, 42n);

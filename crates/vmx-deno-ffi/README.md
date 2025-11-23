@@ -1,6 +1,7 @@
 # VMX Deno FFI
 
-This crate provides FFI bindings for calling Rust functions from Deno/TypeScript using `deno_bindgen`.
+This crate provides FFI bindings for calling Rust functions from Deno/TypeScript
+using `deno_bindgen`.
 
 ## Setup
 
@@ -23,27 +24,33 @@ cargo build --release -p vmx-deno-ffi
 ```
 
 This will generate the dynamic library at:
+
 - macOS: `target/release/libvmx_deno_ffi.dylib`
 - Linux: `target/release/libvmx_deno_ffi.so`
 - Windows: `target/release/vmx_deno_ffi.dll`
 
 ### TypeScript Bindings
 
-The TypeScript bindings are located in `bindings/bindings.ts` at the project root. 
+The TypeScript bindings are located in `bindings/bindings.ts` at the project
+root.
 
 **The `deno task build:ffi` command automatically:**
+
 1. Builds the Rust library for your platform (macOS, Linux, or Windows)
 2. Attempts to generate TypeScript bindings with `deno_bindgen_cli`
 3. If bindings generation fails, it uses existing bindings or creates a template
 4. Fixes the library path to use the release build
 5. Ensures bindings are in the correct location
 
-**Note:** Due to how `deno_bindgen` works, the bindings may not always be auto-generated. The build script is designed to handle this gracefully by:
+**Note:** Due to how `deno_bindgen` works, the bindings may not always be
+auto-generated. The build script is designed to handle this gracefully by:
+
 - Using existing bindings if they're already present
 - Creating a template bindings file if none exist
 - Always ensuring the Rust library is properly compiled
 
-If you add new functions, you'll need to manually update `bindings/bindings.ts` to include them (see "Adding New Functions" below).
+If you add new functions, you'll need to manually update `bindings/bindings.ts`
+to include them (see "Adding New Functions" below).
 
 ## Usage
 
@@ -83,11 +90,14 @@ pub fn multiply(left: u64, right: u64) -> u64 {
 ```
 
 2. Rebuild the library:
+
 ```bash
 deno task build:ffi
 ```
 
-3. Update the bindings manually in `bindings/bindings.ts`. Add your function to the FFI symbols definition:
+3. Update the bindings manually in `bindings/bindings.ts`. Add your function to
+   the FFI symbols definition:
+
 ```typescript
 const { symbols } = Deno.dlopen(
   {
@@ -104,6 +114,7 @@ const { symbols } = Deno.dlopen(
 ```
 
 4. Export the TypeScript wrapper function:
+
 ```typescript
 export function multiply(a0: bigint, a1: bigint): bigint {
   return symbols.multiply(a0, a1) as bigint;
@@ -111,6 +122,7 @@ export function multiply(a0: bigint, a1: bigint): bigint {
 ```
 
 5. Use from TypeScript:
+
 ```typescript
 import { multiply } from "./bindings/bindings.ts";
 
@@ -120,18 +132,19 @@ console.log(result); // 50n
 
 ## Type Mapping
 
-| Rust Type | TypeScript Type |
-|-----------|----------------|
-| `u8`, `u16`, `u32` | `number` |
-| `u64`, `i64` | `bigint` |
-| `f32`, `f64` | `number` |
-| `bool` | `boolean` |
-| `String` | `string` |
-| `Vec<u8>` | `Uint8Array` |
+| Rust Type          | TypeScript Type |
+| ------------------ | --------------- |
+| `u8`, `u16`, `u32` | `number`        |
+| `u64`, `i64`       | `bigint`        |
+| `f32`, `f64`       | `number`        |
+| `bool`             | `boolean`       |
+| `String`           | `string`        |
+| `Vec<u8>`          | `Uint8Array`    |
 
 ## Non-Blocking Functions
 
-Functions marked with `#[deno_bindgen(non_blocking)]` will be executed asynchronously and return a Promise:
+Functions marked with `#[deno_bindgen(non_blocking)]` will be executed
+asynchronously and return a Promise:
 
 ```rust
 #[deno_bindgen(non_blocking)]
@@ -151,13 +164,16 @@ const result = await expensive_operation(1000n);
 ### Library not found error
 
 Make sure you've built the library:
+
 ```bash
 deno task build:ffi
 ```
 
 ### Wrong architecture error
 
-Ensure you're building for the correct architecture. On Apple Silicon Macs, you may need to explicitly specify:
+Ensure you're building for the correct architecture. On Apple Silicon Macs, you
+may need to explicitly specify:
+
 ```bash
 cargo build --release --target aarch64-apple-darwin -p vmx-deno-ffi
 ```
@@ -165,6 +181,7 @@ cargo build --release --target aarch64-apple-darwin -p vmx-deno-ffi
 ### Permission errors
 
 Deno requires explicit permissions for FFI:
+
 ```bash
 deno run --allow-ffi --allow-read your_script.ts
 ```

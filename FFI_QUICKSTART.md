@@ -1,6 +1,7 @@
 # Deno FFI with Rust - Quick Start Guide
 
-This guide will help you get started with calling Rust functions from TypeScript using Deno's FFI (Foreign Function Interface).
+This guide will help you get started with calling Rust functions from TypeScript
+using Deno's FFI (Foreign Function Interface).
 
 ## 🚀 Quick Start
 
@@ -11,6 +12,7 @@ deno task build:ffi
 ```
 
 This command will:
+
 - Compile the Rust library (`vmx-deno-ffi`)
 - Attempt to generate TypeScript bindings (or use existing ones)
 - Set up everything for cross-platform use (macOS, Linux, Windows)
@@ -121,7 +123,11 @@ const { symbols } = Deno.dlopen(
   {
     add: { parameters: ["u64", "u64"], result: "u64", nonblocking: true },
     multiply: { parameters: ["u64", "u64"], result: "u64", nonblocking: false },
-    expensive_calculation: { parameters: ["u64"], result: "u64", nonblocking: true },
+    expensive_calculation: {
+      parameters: ["u64"],
+      result: "u64",
+      nonblocking: true,
+    },
   },
 );
 
@@ -138,7 +144,7 @@ export function expensive_calculation(n: bigint): Promise<bigint> {
 ### Step 4: Use in TypeScript
 
 ```typescript
-import { multiply, expensive_calculation } from "./bindings/bindings.ts";
+import { expensive_calculation, multiply } from "./bindings/bindings.ts";
 
 // Synchronous-style function
 const product = multiply(5n, 10n);
@@ -149,22 +155,22 @@ const result = await expensive_calculation(1000n);
 
 ## 🔧 Available Commands
 
-| Command | Description |
-|---------|-------------|
-| `deno task build:ffi` | Build Rust library and generate bindings |
-| `deno task test:ffi` | Run FFI tests |
-| `deno run --allow-ffi --allow-read your_script.ts` | Run your script with FFI permissions |
+| Command                                            | Description                              |
+| -------------------------------------------------- | ---------------------------------------- |
+| `deno task build:ffi`                              | Build Rust library and generate bindings |
+| `deno task test:ffi`                               | Run FFI tests                            |
+| `deno run --allow-ffi --allow-read your_script.ts` | Run your script with FFI permissions     |
 
 ## 📊 Type Mapping Reference
 
-| Rust Type | TypeScript Type | Example |
-|-----------|----------------|---------|
-| `u8`, `u16`, `u32` | `number` | `42` |
-| `u64`, `i64` | `bigint` | `42n` |
-| `f32`, `f64` | `number` | `3.14` |
-| `bool` | `boolean` | `true` |
-| `String` | `string` | `"hello"` |
-| `Vec<u8>` | `Uint8Array` | `new Uint8Array([1, 2, 3])` |
+| Rust Type          | TypeScript Type | Example                     |
+| ------------------ | --------------- | --------------------------- |
+| `u8`, `u16`, `u32` | `number`        | `42`                        |
+| `u64`, `i64`       | `bigint`        | `42n`                       |
+| `f32`, `f64`       | `number`        | `3.14`                      |
+| `bool`             | `boolean`       | `true`                      |
+| `String`           | `string`        | `"hello"`                   |
+| `Vec<u8>`          | `Uint8Array`    | `new Uint8Array([1, 2, 3])` |
 
 ## ⚠️ Common Gotchas
 
@@ -203,6 +209,7 @@ deno run --allow-ffi --allow-read your_script.ts
 ### "Library not found" Error
 
 **Solution:** Build the library first
+
 ```bash
 deno task build:ffi
 ```
@@ -210,13 +217,15 @@ deno task build:ffi
 ### "Permission denied" Error
 
 **Solution:** Add required permissions
+
 ```bash
 deno run --allow-ffi --allow-read your_script.ts
 ```
 
 ### Type Mismatch Errors
 
-**Solution:** Ensure you're using the correct types (especially `bigint` for u64)
+**Solution:** Ensure you're using the correct types (especially `bigint` for
+u64)
 
 ## 📚 Learn More
 
@@ -227,19 +236,27 @@ deno run --allow-ffi --allow-read your_script.ts
 
 ## ✨ Tips
 
-1. **Use FFI for CPU-intensive tasks** - Rust's performance shines for heavy computations
-2. **Non-blocking by default** - Functions marked with `#[deno_bindgen(non_blocking)]` return Promises and won't block the event loop
+1. **Use FFI for CPU-intensive tasks** - Rust's performance shines for heavy
+   computations
+2. **Non-blocking by default** - Functions marked with
+   `#[deno_bindgen(non_blocking)]` return Promises and won't block the event
+   loop
 3. **Type safety** - The bindings provide TypeScript types automatically
 4. **Cross-platform** - The build script handles different OS library formats
-5. **Manual bindings** - When adding new functions, you'll need to update `bindings/bindings.ts` manually
+5. **Manual bindings** - When adding new functions, you'll need to update
+   `bindings/bindings.ts` manually
 
 ## 🔄 Build Process Note
 
-The build script attempts to auto-generate bindings with `deno_bindgen_cli`, but this may not always work due to how metadata is embedded. The script is designed to:
+The build script attempts to auto-generate bindings with `deno_bindgen_cli`, but
+this may not always work due to how metadata is embedded. The script is designed
+to:
+
 - Use existing bindings if generation fails
 - Create a template if no bindings exist
 - Always compile the Rust library successfully
 
-This is a known limitation of the current `deno_bindgen` setup and doesn't affect functionality.
+This is a known limitation of the current `deno_bindgen` setup and doesn't
+affect functionality.
 
 Happy coding! 🦕🦀

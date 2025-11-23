@@ -43,6 +43,7 @@ cargo run -p vmx-server
 ```
 
 The server will start and display:
+
 ```
 Starting VMX UI at 0.0.0.0:8887
 Proxying /api/* requests to http://localhost:8889
@@ -53,6 +54,7 @@ Proxying /api/* requests to http://localhost:8889
 ### Supported Methods
 
 The proxy forwards all standard HTTP methods:
+
 - GET
 - POST
 - PUT
@@ -64,6 +66,7 @@ The proxy forwards all standard HTTP methods:
 ### Request Forwarding
 
 The proxy forwards:
+
 - ✅ Request method
 - ✅ Request path (preserves `/api/` prefix)
 - ✅ Query parameters
@@ -73,6 +76,7 @@ The proxy forwards:
 ### Response Forwarding
 
 The proxy returns:
+
 - ✅ Response status code
 - ✅ Response headers (except CONNECTION, TRANSFER-ENCODING)
 - ✅ Response body
@@ -80,18 +84,21 @@ The proxy returns:
 ### Example Requests
 
 #### GET Request
+
 ```bash
 curl http://localhost:8887/api/users
 # Proxied to: http://localhost:8889/api/users
 ```
 
 #### GET with Query Parameters
+
 ```bash
 curl http://localhost:8887/api/users?page=1&limit=10
 # Proxied to: http://localhost:8889/api/users?page=1&limit=10
 ```
 
 #### POST Request
+
 ```bash
 curl -X POST http://localhost:8887/api/users \
   -H "Content-Type: application/json" \
@@ -100,6 +107,7 @@ curl -X POST http://localhost:8887/api/users \
 ```
 
 #### PUT Request
+
 ```bash
 curl -X PUT http://localhost:8887/api/users/123 \
   -H "Content-Type: application/json" \
@@ -108,6 +116,7 @@ curl -X PUT http://localhost:8887/api/users/123 \
 ```
 
 #### DELETE Request
+
 ```bash
 curl -X DELETE http://localhost:8887/api/users/123
 # Proxied to: http://localhost:8889/api/users/123
@@ -132,6 +141,7 @@ curl http://localhost:8887/api/users
 ```
 
 The test backend provides these endpoints:
+
 - `GET /api/health` - Health check
 - `GET /api/users` - List users
 - `GET /api/users/:id` - Get user by ID
@@ -149,6 +159,7 @@ Routes are evaluated in this order:
 3. `GET /{path}` → Static file or `index.html` (SPA fallback)
 
 This allows:
+
 - API requests to be proxied
 - Static assets to be served
 - SPA routing to work (all non-API routes serve index.html)
@@ -157,10 +168,10 @@ This allows:
 
 The proxy handles errors gracefully:
 
-| Error Type | Response | Details |
-|------------|----------|---------|
-| Connection Failed | 502 Bad Gateway | Backend unreachable |
-| Network Error | 502 Bad Gateway | Network issue during request |
+| Error Type          | Response        | Details                         |
+| ------------------- | --------------- | ------------------------------- |
+| Connection Failed   | 502 Bad Gateway | Backend unreachable             |
+| Network Error       | 502 Bad Gateway | Network issue during request    |
 | Response Read Error | 502 Bad Gateway | Failed to read backend response |
 
 All errors are logged to stderr with `eprintln!`.
@@ -169,10 +180,10 @@ All errors are logged to stderr with `eprintln!`.
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VMX_UI_HOST` | `0.0.0.0` | Host to bind the server |
-| `VMX_UI_PORT` | `8887` | Port to bind the server |
+| Variable          | Default                 | Description                  |
+| ----------------- | ----------------------- | ---------------------------- |
+| `VMX_UI_HOST`     | `0.0.0.0`               | Host to bind the server      |
+| `VMX_UI_PORT`     | `8887`                  | Port to bind the server      |
 | `VMX_BACKEND_URL` | `http://localhost:8889` | Backend API URL for proxying |
 
 ### Changing Backend URL
@@ -180,12 +191,15 @@ All errors are logged to stderr with `eprintln!`.
 You can change the backend URL in three ways:
 
 #### 1. Environment Variable (Recommended)
+
 ```bash
 VMX_BACKEND_URL="http://api.example.com" cargo run -p vmx-server
 ```
 
 #### 2. Code Modification
+
 Edit `src/lib.rs` and change the default:
+
 ```rust
 let backend_url = std::env::var("VMX_BACKEND_URL")
     .unwrap_or_else(|_| "http://your-backend:8080".to_string());
@@ -220,6 +234,7 @@ Located in `src/lib.rs`, the `api()` function:
 ### Static File Serving
 
 Uses `rust-embed` to embed the webui at compile time:
+
 - Production builds include files directly in binary
 - Debug builds use `debug-embed` feature to serve files from disk
 
@@ -227,7 +242,8 @@ Uses `rust-embed` to embed the webui at compile time:
 
 For production deployments, consider:
 
-1. **Connection Pooling** - Create a persistent `awc::Client` with connection pooling
+1. **Connection Pooling** - Create a persistent `awc::Client` with connection
+   pooling
 2. **Timeouts** - Configure request timeouts
 3. **Retry Logic** - Implement retry for transient failures
 4. **Logging** - Use a proper logging framework (e.g., `tracing`)
@@ -240,13 +256,19 @@ For production deployments, consider:
 ## Troubleshooting
 
 ### Backend Connection Refused
+
 ```
 Proxy error: error sending request for url (http://localhost:8889/api/users)
 ```
-**Solution**: Ensure your backend is running on the configured port (default 8889).
+
+**Solution**: Ensure your backend is running on the configured port (default
+8889).
 
 ### CORS Issues
-The server uses `Cors::permissive()` which allows all origins. For production, configure CORS properly:
+
+The server uses `Cors::permissive()` which allows all origins. For production,
+configure CORS properly:
+
 ```rust
 let cors = Cors::default()
     .allowed_origin("https://yourdomain.com")
@@ -256,7 +278,9 @@ let cors = Cors::default()
 ```
 
 ### 404 for Static Files
+
 Ensure the webui is built before running:
+
 ```bash
 cd webui
 npm install
