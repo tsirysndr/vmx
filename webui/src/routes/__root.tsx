@@ -1,66 +1,49 @@
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
+import {
+  createRootRoute,
+  Outlet,
+  redirect,
+  useRouterState,
+} from "@tanstack/react-router";
 import { useEffect } from "react";
+import Sidebar from "../components/sidebar";
 
 export const Route = createRootRoute({
+  beforeLoad: ({ location }) => {
+    const token = localStorage.getItem("token");
+    if (!token && location.pathname !== "/login") {
+      throw redirect({
+        to: "/login",
+        replace: true,
+      });
+    }
+  },
   component: RootComponent,
 });
 
 function RootComponent() {
+  const routerState = useRouterState();
+  const isLoginPage = routerState.location.pathname === "/login";
+
   useEffect(() => {
     document.documentElement.classList.add("dark");
   }, []);
+
+  if (isLoginPage) {
+    return (
+      <div className="h-screen overflow-y-auto">
+        <Outlet />
+      </div>
+    );
+  }
+
+  if (!localStorage.getItem("token")) {
+    return <></>;
+  }
+
   return (
     <>
       <div className="flex flex-row h-screen overflow-hidden">
-        <div>
-          <button
-            type="button"
-            className="btn btn-text max-sm:btn-square sm:hidden"
-            aria-haspopup="dialog"
-            aria-expanded="false"
-            aria-controls="scoped-sidebar"
-            data-overlay="#scoped-sidebar"
-            data-overlay-options='{ "backdropExtraClasses": "!absolute", "backdropParent": "#custom-backdrop-container" }'
-          >
-            <span className="icon-[tabler--menu-2] size-5"></span>
-          </button>
-
-          <aside
-            id="scoped-sidebar"
-            className="overlay [--auto-close:sm] sm:shadow-none overlay-open:translate-x-0 drawer drawer-start max-w-64 fixed sm:fixed left-0 top-0 h-screen z-1 sm:flex sm:translate-x-0 [--body-scroll:true]"
-            role="dialog"
-            tabIndex={-1}
-          >
-            <div className="drawer-body px-2 pt-4 h-full overflow-y-auto !bg-(--color-background) border-r border-(--color-border)">
-              <div className="h-20 flex items-center pl-5 pr-5 !text-base">
-                <span className="icon-[tabler--server] size-5 mr-3"></span>
-                local
-              </div>
-              <ul className="menu p-0 !text-sm">
-                <li>
-                  <Link to="/">
-                    <span className="icon-[tabler--home] size-5"></span>
-                    Overview
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/profile">
-                    <span className="icon-[tabler--user] size-5"></span>
-                    Profile
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/sshkeys">
-                    <span className="icon-[tabler--key] size-5"></span>
-                    SSH Keys
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </aside>
-          <div id="custom-backdrop-container"></div>
-        </div>
-        <div className="w-[256px] max-sm:hidden flex-shrink-0"></div>
+        <Sidebar />
         <div className="flex-1 h-screen overflow-y-auto">
           <Outlet />
         </div>

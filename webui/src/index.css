@@ -18,18 +18,20 @@ body {
   font-size: 14px;
 }
 
-* {
-  color: inherit;
-}
-
 :root {
   --color-background: #ffffff;
   --color-text: #000000;
   --color-border: #000000;
+  --color-muted: #b4b2b2;
+  --color-fuschia: oklch(0.6372 0.229 346.83);
+  --color-slate: oklch(0.129 0.042 264.695);
 }
 
 .dark {
   --color-background: #130826;
   --color-text: #ffffff;
   --color-border: #1f192a;
+  --color-muted: #b4b2b2;
+  --color-fuschia: oklch(0.6372 0.229 346.83);
+  --color-slate: oklch(0.129 0.042 264.695);
 }

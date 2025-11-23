@@ -1,7 +1,5 @@
 import { API_URL } from "../consts";
 
-const ACCESS_TOKEN = import.meta.env.VITE_API_TOKEN;
-
 export type Machine = {
   id: string;
   name: string;
@@ -29,7 +27,7 @@ export const fetchMachines = async (offset?: number, size?: number) => {
 
   const response = await fetch(url, {
     headers: {
-      Authorization: `Bearer ${ACCESS_TOKEN}`,
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
     },
   });
   const data = await response.json();
