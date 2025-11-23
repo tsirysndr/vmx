@@ -11,7 +11,7 @@ function RootComponent() {
   }, []);
   return (
     <>
-      <div className="flex flex-row min-h-screen">
+      <div className="flex flex-row h-screen overflow-hidden">
         <div>
           <button
             type="button"
@@ -27,16 +27,16 @@ function RootComponent() {
 
           <aside
             id="scoped-sidebar"
-            className="overlay [--auto-close:sm] sm:shadow-none overlay-open:translate-x-0 drawer drawer-start max-w-64 absolute z-1 sm:flex sm:translate-x-0 [--body-scroll:true]"
+            className="overlay [--auto-close:sm] sm:shadow-none overlay-open:translate-x-0 drawer drawer-start max-w-64 fixed sm:fixed left-0 top-0 h-screen z-1 sm:flex sm:translate-x-0 [--body-scroll:true]"
             role="dialog"
             tabIndex={-1}
           >
-            <div className="drawer-body px-2 pt-4  bg-(--color-background)! border-r border-(--color-border)">
-              <div className="h-20 flex items-center pl-5 pr-5  text-[16px]!">
+            <div className="drawer-body px-2 pt-4 h-full overflow-y-auto !bg-(--color-background) border-r border-(--color-border)">
+              <div className="h-20 flex items-center pl-5 pr-5 !text-base">
                 <span className="icon-[tabler--server] size-5 mr-3"></span>
                 local
               </div>
-              <ul className="menu p-0 text-[14px]!">
+              <ul className="menu p-0 !text-sm">
                 <li>
                   <Link to="/">
                     <span className="icon-[tabler--home] size-5"></span>
@@ -60,8 +60,8 @@ function RootComponent() {
           </aside>
           <div id="custom-backdrop-container"></div>
         </div>
-        <div className="w-[256px] max-sm:hidden"></div>
-        <div className="min-h-screen flex-1">
+        <div className="w-[256px] max-sm:hidden flex-shrink-0"></div>
+        <div className="flex-1 h-screen overflow-y-auto">
           <Outlet />
         </div>
       </div>

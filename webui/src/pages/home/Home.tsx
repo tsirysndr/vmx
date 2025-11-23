@@ -3,7 +3,7 @@ import List from "./List";
 function Home() {
   return (
     <div className="p-6 mt-5 w-full">
-      <h1 className="text-[17x] text-white!">Virtual Machines</h1>
+      <h1 className="text-[17x] ">Virtual Machines</h1>
       <div className="mt-6 flex justify-between w-full">
         <div>
           <div className="input input-sm flex max-w-sm space-x-4 bg-(--color-background) border-r text-[13px]">
