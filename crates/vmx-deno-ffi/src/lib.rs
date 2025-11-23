@@ -6,7 +6,7 @@ pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
 
-#[deno_bindgen]
+#[deno_bindgen(non_blocking)]
 pub fn start_http_server() {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()

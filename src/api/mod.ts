@@ -10,37 +10,37 @@ import { parseFlags } from "@cliffy/flags";
 export { images, machines, volumes };
 
 export default function () {
-  const token = Deno.env.get("VMX_API_TOKEN") || crypto.randomUUID();
-  const { flags } = parseFlags(Deno.args);
+    const token = Deno.env.get("VMX_API_TOKEN") || crypto.randomUUID();
+    const { flags } = parseFlags(Deno.args);
 
-  if (!Deno.env.get("VMX_API_TOKEN")) {
-    console.log(`Using API token: ${token}`);
-  } else {
-    console.log(
-      `Using provided API token from environment variable VMX_API_TOKEN`,
+    if (!Deno.env.get("VMX_API_TOKEN")) {
+        console.log(`Using API token: ${token}`);
+    } else {
+        console.log(
+            `Using provided API token from environment variable VMX_API_TOKEN`,
+        );
+    }
+
+    const app = new Hono();
+
+    app.use(logger());
+    app.use(cors());
+
+    app.use("/images/*", bearerAuth({ token }));
+    app.use("/machines/*", bearerAuth({ token }));
+    app.use("/volumes/*", bearerAuth({ token }));
+
+    app.route("/images", images);
+    app.route("/machines", machines);
+    app.route("/volumes", volumes);
+
+    const port = Number(
+        flags.port ||
+            flags.p ||
+            (Deno.env.get("VMX_API_PORT")
+                ? Number(Deno.env.get("VMX_API_PORT"))
+                : 8889),
     );
-  }
 
-  const app = new Hono();
-
-  app.use(logger());
-  app.use(cors());
-
-  app.use("/images/*", bearerAuth({ token }));
-  app.use("/machines/*", bearerAuth({ token }));
-  app.use("/volumes/*", bearerAuth({ token }));
-
-  app.route("/images", images);
-  app.route("/machines", machines);
-  app.route("/volumes", volumes);
-
-  const port = Number(
-    flags.port ||
-      flags.p ||
-      (Deno.env.get("VMX_API_PORT")
-        ? Number(Deno.env.get("VMX_API_PORT"))
-        : 8889),
-  );
-
-  Deno.serve({ port }, app.fetch);
+    return Deno.serve({ port }, app.fetch);
 }
