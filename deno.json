@@ -28,5 +28,12 @@
     "hono": "npm:hono@^4.10.6",
     "kysely": "npm:kysely@0.27.6",
     "moniker": "npm:moniker@^0.1.2"
+  },
+  "fmt": {
+    "exclude": [
+      "webui",
+      ".github",
+      ".tangled"
+    ]
   }
 }
