@@ -40,7 +40,7 @@ export const stopMachine = async (id: string) => {
   const response = await fetch(url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${ACCESS_TOKEN}`,
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
     },
   });
   const data = await response.json();
@@ -53,7 +53,7 @@ export const startMachine = async (id: string) => {
   const response = await fetch(url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${ACCESS_TOKEN}`,
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({}),
