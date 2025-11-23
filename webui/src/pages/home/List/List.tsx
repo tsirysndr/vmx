@@ -27,7 +27,6 @@ function List() {
           <th>Status</th>
           <th>PID</th>
           <th>Image</th>
-          <th>Ports</th>
           <th>Created</th>
         </tr>
       </thead>
@@ -72,7 +71,6 @@ function List() {
                   ? "..."
                   : ""}
               </td>
-              <td>{machine.portForward}</td>
               <td>{dayjs.utc(machine.createdAt).fromNow()}</td>
             </tr>
           ))
