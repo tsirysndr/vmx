@@ -1,4 +1,4 @@
-import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 export const Route = createRootRoute({
@@ -32,32 +32,36 @@ function RootComponent() {
             tabIndex={-1}
           >
             <div className="drawer-body px-2 pt-4  bg-(--color-background)! border-r border-(--color-border)">
-              <div className="h-20 flex items-center pl-5 pr-5">vmx</div>
-              <ul className="menu p-0 text-[14px]">
+              <div className="h-20 flex items-center pl-5 pr-5  text-[16px]!">
+                <span className="icon-[tabler--server] size-5 mr-3"></span>
+                local
+              </div>
+              <ul className="menu p-0 text-[14px]!">
                 <li>
-                  <a href="#">
+                  <Link to="/">
                     <span className="icon-[tabler--home] size-5"></span>
                     Overview
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#">
+                  <Link to="/profile">
                     <span className="icon-[tabler--user] size-5"></span>
                     Profile
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#">
+                  <Link to="/sshkeys">
                     <span className="icon-[tabler--key] size-5"></span>
                     SSH Keys
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
           </aside>
           <div id="custom-backdrop-container"></div>
         </div>
-        <div className="ml-[260px] min-h-screen w-[calc(100%-260px)]">
+        <div className="w-[256px] max-sm:hidden"></div>
+        <div className="min-h-screen flex-1">
           <Outlet />
         </div>
       </div>
