@@ -184,7 +184,7 @@ async fn login_with_github() -> impl Responder {
 
     let client = BasicClient::new(ClientId::new(client_id))
         .set_client_secret(ClientSecret::new(
-            "ddb3987ec8e72a5e47c515b0ff7cadebff984124".to_string(),
+            option_env!("GITHUB_CLIENT_SECRET").unwrap().to_string(),
         ))
         .set_auth_uri(AuthUrl::new("https://github.com/login/oauth/authorize".to_string()).unwrap())
         .set_token_uri(

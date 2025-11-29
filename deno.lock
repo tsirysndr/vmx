@@ -12,6 +12,7 @@
     "jsr:@cliffy/table@^1.0.0-rc.8": "1.0.0-rc.8",
     "jsr:@db/sqlite@0.12": "0.12.0",
     "jsr:@denosaurs/plug@1": "1.1.0",
+    "jsr:@denosaurs/plug@^1.1.0": "1.1.0",
     "jsr:@es-toolkit/es-toolkit@^1.41.0": "1.41.0",
     "jsr:@soapbox/kysely-deno-sqlite@^2.2.0": "2.2.0",
     "jsr:@std/assert@0.217": "0.217.0",
@@ -102,7 +103,7 @@
     "@db/sqlite@0.12.0": {
       "integrity": "dd1ef7f621ad50fc1e073a1c3609c4470bd51edc0994139c5bf9851de7a6d85f",
       "dependencies": [
-        "jsr:@denosaurs/plug",
+        "jsr:@denosaurs/plug@1",
         "jsr:@std/path@0.217"
       ]
     },
@@ -271,6 +272,7 @@
       "jsr:@cliffy/prompt@^1.0.0-rc.8",
       "jsr:@cliffy/table@^1.0.0-rc.8",
       "jsr:@db/sqlite@0.12",
+      "jsr:@denosaurs/plug@^1.1.0",
       "jsr:@es-toolkit/es-toolkit@^1.41.0",
       "jsr:@soapbox/kysely-deno-sqlite@^2.2.0",
       "jsr:@std/assert@1",
