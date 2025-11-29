@@ -1,9 +1,11 @@
+/** biome-ignore-all lint/a11y/useButtonType: <explanation> */
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { login } from "../../api/auth";
+import { login, loginWithATProto, loginWithGithub } from "../../api/auth";
 
 function Login() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [token, setToken] = useState("");
   const [handle, setHandle] = useState("");
   const [continueWithAccessToken, setContinueWithAccessToken] = useState(false);
@@ -27,9 +29,17 @@ function Login() {
     });
   };
 
-  const onSignInWithGithub = async () => {};
+  const onSignInWithGithub = async () => {
+    const { auth_url } = await loginWithGithub();
+    window.location.href = auth_url;
+  };
 
-  const onSignInWithATProto = async () => {};
+  const onSignInWithATProto = async () => {
+    setLoading(true);
+    const { auth_url } = await loginWithATProto(handle);
+    setLoading(false);
+    window.location.href = auth_url;
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen">
@@ -100,6 +110,9 @@ function Login() {
             }
             className="btn btn-primary btn-md text-[14px] w-full text-white"
           >
+            {loading && (
+              <span className="loading loading-spinner loading-sm"></span>
+            )}
             Sign In
           </button>
         </div>
