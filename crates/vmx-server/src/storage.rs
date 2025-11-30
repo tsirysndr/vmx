@@ -81,33 +81,42 @@ impl ClientAuthStore for SqliteSessionStore {
     async fn get_session(
         &self,
         did: &Did<'_>,
-        session_id: &str,
+        _session_id: &str,
     ) -> Result<Option<ClientSessionData<'_>>, SessionStoreError> {
-        let key = format!("{}_{}", did, session_id);
-        repo::auth_session::get_by_did(&self.pool, &key)
+        let row = repo::auth_session::get_by_did(&self.pool, did.as_str())
             .await
             .map_err(|e| {
                 SessionStoreError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
             })?;
-        Ok(None)
+        if row.is_none() {
+            return Ok(None);
+        }
+        let row = row.unwrap();
+        let session_json: &str = Box::leak(row.session.into_boxed_str());
+        let session: ClientSessionData<'_> = serde_json::from_str(session_json).unwrap();
+        Ok(Some(session))
     }
 
     async fn upsert_session(
         &self,
         session: ClientSessionData<'_>,
     ) -> Result<(), SessionStoreError> {
-        let key = format!("{}_{}", session.account_did, session.session_id);
-
+        repo::auth_session::save_or_update(
+            &self.pool,
+            &session.account_did,
+            &serde_json::to_string(&session).map_err(|e| SessionStoreError::Serde(e))?,
+        )
+        .await
+        .map_err(|e| SessionStoreError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
         Ok(())
     }
 
     async fn delete_session(
         &self,
         did: &Did<'_>,
-        session_id: &str,
+        _session_id: &str,
     ) -> Result<(), SessionStoreError> {
-        let key = format!("{}_{}", did, session_id);
-        repo::auth_session::delete_by_did(&self.pool, &key)
+        repo::auth_session::delete_by_did(&self.pool, did.as_str())
             .await
             .map_err(|e| {
                 SessionStoreError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))

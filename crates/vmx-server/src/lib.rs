@@ -12,13 +12,16 @@ use actix_web::{
 };
 use awc::Client;
 use dotenv::dotenv;
-use jacquard::{identity::JacquardResolver, oauth::client::OAuthClient, types::did::Did};
-use jacquard_oauth::{
-    atproto::{AtprotoClientMetadata, GrantType},
-    scopes::{Scope, TransitionScope},
-    types::AuthorizeOptions,
+use jacquard::api::com_atproto::repo::list_records::ListRecords;
+use jacquard::prelude::XrpcClient;
+use jacquard::{
+    client::Agent, identity::JacquardResolver, oauth::client::OAuthClient, types::did::Did,
 };
-use jsonwebtoken::EncodingKey;
+use jacquard_oauth::{
+    atproto::AtprotoClientMetadata,
+    scopes::{Scope, TransitionScope},
+    types::{AuthorizeOptions, CallbackParams},
+};
 use mime_guess::from_path;
 use oauth2::{
     basic::BasicClient, AuthorizationCode, CsrfToken, EndpointNotSet, EndpointSet,
@@ -27,7 +30,7 @@ use oauth2::{
 use oauth2::{AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
 use rust_embed::RustEmbed;
 use serde_json::json;
-use sqlx::sqlite::SqliteConnectOptions;
+use sqlx::{sqlite::SqliteConnectOptions, Pool, Sqlite};
 use tokio::fs;
 use tracing_subscriber::fmt::format::Format;
 use url::Url;
@@ -70,14 +73,69 @@ async fn index() -> impl Responder {
 }
 
 #[actix_web::get("/api/sshkeys")]
-async fn sshkeys() -> impl Responder {
+async fn sshkeys(
+    oauth: web::Data<Arc<OauthClientType>>,
+    pool: web::Data<Arc<Pool<Sqlite>>>,
+) -> impl Responder {
     let did = Did::new("did:plc:7vdlgi2bflelz7mmuxoqjfcr".into());
     if did.is_err() {
         return HttpResponse::BadRequest().body("Invalid DID");
     }
     let did = did.unwrap();
 
-    HttpResponse::Ok().json(json!([]))
+    let auth_session = repo::auth_session::get_by_did(&pool, did.as_str()).await;
+    if auth_session.is_err() {
+        return HttpResponse::Unauthorized().body("Unauthorized");
+    }
+
+    let auth_session = auth_session.unwrap();
+
+    if auth_session.is_none() {
+        return HttpResponse::Unauthorized().body("Unauthorized");
+    }
+
+    let auth_session = auth_session.unwrap();
+    let auth_session: serde_json::Value = serde_json::from_str(&auth_session.session).unwrap();
+    let session = oauth
+        .restore(&did, auth_session["session_id"].as_str().unwrap())
+        .await;
+
+    if let Err(err) = session {
+        tracing::error!("Failed to restore session: {}", err);
+        return HttpResponse::InternalServerError().body("Can't restore session");
+    }
+
+    let session = session.unwrap();
+
+    let agent = Agent::new(session);
+    let info = agent.info().await;
+    if info.is_none() {
+        tracing::error!("Failed to get agent info");
+        return HttpResponse::InternalServerError().body("Can't get agent info");
+    }
+    let info = info.unwrap();
+    tracing::info!(did = ?info, "ATProto login successful for DID");
+
+    let did = info.0.replace("at://", "");
+    println!("DID: {}", did);
+    let response = agent
+        .send(
+            ListRecords::new()
+                .limit(100)
+                .repo(did)
+                .collection("sh.tangled.publicKey".to_string())
+                .build(),
+        )
+        .await;
+
+    if response.is_err() {
+        tracing::error!("Failed to get public keys: {}", response.err().unwrap());
+        return HttpResponse::InternalServerError().body("Can't get public key");
+    }
+
+    let response = response.unwrap();
+    let output = response.into_output().unwrap();
+    HttpResponse::Ok().json(output.records)
 }
 
 // Proxy to backend API server
@@ -281,6 +339,36 @@ async fn oauth_callback(
         tracing::error!("JWT_SECRET environment variable is not set");
         return HttpResponse::InternalServerError().finish();
     }
+
+    let params = query.into_inner();
+
+    if params["code"].as_str().is_none() {
+        return HttpResponse::BadRequest().finish();
+    }
+
+    let params = CallbackParams {
+        code: params["code"].as_str().unwrap_or_default().into(),
+        state: params["state"].as_str().map(|v| v.into()),
+        iss: params["iss"].as_str().map(|v| v.into()),
+    };
+
+    let session = oauth.callback(params).await;
+
+    if session.is_err() {
+        tracing::error!("Failed to callback");
+        return HttpResponse::InternalServerError().finish();
+    }
+
+    let session = session.unwrap();
+    let agent = Agent::new(session);
+    let info = agent.info().await;
+    if info.is_none() {
+        tracing::error!("Failed to get agent info");
+        return HttpResponse::InternalServerError().finish();
+    }
+    let info = info.unwrap();
+    tracing::info!(did = ?info, "ATProto login successful for DID");
+
     HttpResponse::Ok().json(json!({ "message": "Success" }))
 }
 
