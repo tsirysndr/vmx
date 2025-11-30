@@ -2,8 +2,7 @@ use std::{collections::HashMap, env, sync::Arc};
 
 use crate::{
     db::create_tables_in_database,
-    resolver::HickoryDnsTxtResolver,
-    storage::{SqliteSessionStore, SqliteStateStore},
+    storage::SqliteSessionStore,
     types::{AccessToken, Claims, LoginRequest},
 };
 use actix_cors::Cors;
@@ -11,17 +10,12 @@ use actix_session::{storage::CookieSessionStore, Session, SessionMiddleware};
 use actix_web::{
     cookie::Key, middleware, web, App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
-use atrium_api::{agent::Agent, types::string::Did};
-use atrium_identity::{
-    did::{CommonDidResolver, CommonDidResolverConfig, DEFAULT_PLC_DIRECTORY_URL},
-    handle::{AtprotoHandleResolver, AtprotoHandleResolverConfig},
-};
-use atrium_oauth::{
-    AtprotoLocalhostClientMetadata, AuthorizeOptions, CallbackParams, DefaultHttpClient,
-    KnownScope, OAuthClient, OAuthClientConfig, OAuthResolverConfig, Scope,
-};
+use anyhow::Error;
+use atrium_api::types::string::Did;
 use awc::Client;
 use dotenv::dotenv;
+use jacquard::{identity::JacquardResolver, oauth::client::OAuthClient};
+use jacquard_oauth::{atproto::AtprotoClientMetadata, loopback::LoopbackConfig};
 use jsonwebtoken::EncodingKey;
 use mime_guess::from_path;
 use oauth2::{
@@ -46,14 +40,7 @@ pub mod types;
 #[folder = "../../webui/dist/"]
 struct Asset;
 
-type OAuthClientType = Arc<
-    OAuthClient<
-        SqliteStateStore,
-        SqliteSessionStore,
-        CommonDidResolver<DefaultHttpClient>,
-        AtprotoHandleResolver<HickoryDnsTxtResolver, DefaultHttpClient>,
-    >,
->;
+type OauthClientType = OAuthClient<JacquardResolver, SqliteSessionStore>;
 
 #[derive(Clone)]
 struct AppState {
@@ -81,22 +68,12 @@ async fn index() -> impl Responder {
 }
 
 #[actix_web::get("/api/sshkeys")]
-async fn sshkeys(oauth_client: web::Data<OAuthClientType>) -> impl Responder {
+async fn sshkeys() -> impl Responder {
     let did = Did::new("did:plc:7vdlgi2bflelz7mmuxoqjfcr".into());
     if did.is_err() {
         return HttpResponse::BadRequest().body("Invalid DID");
     }
     let did = did.unwrap();
-
-    let session = oauth_client.restore(&did).await;
-
-    if session.is_err() {
-        return HttpResponse::InternalServerError().body("Failed to restore session");
-    }
-
-    let session = session.unwrap();
-
-    let agent = Agent::new(session);
 
     HttpResponse::Ok().json(json!([]))
 }
@@ -172,22 +149,22 @@ async fn spa_routes() -> impl Responder {
 #[actix_web::get("/oauth/login")]
 async fn login(
     query: web::Query<LoginRequest>,
-    oauth_client: web::Data<OAuthClientType>,
+    oauth: web::Data<OauthClientType>,
 ) -> impl Responder {
     let query = query.into_inner();
-
-    let oauth_url = oauth_client
-        .authorize(
-            &query.handle,
-            AuthorizeOptions {
-                scopes: vec![
-                    Scope::Known(KnownScope::Atproto),
-                    Scope::Known(KnownScope::TransitionGeneric),
-                ],
-                ..Default::default()
-            },
+    let session = oauth
+        .login_with_local_server(
+            query.handle.clone(),
+            Default::default(),
+            LoopbackConfig::default(),
         )
         .await;
+    if session.is_err() {
+        tracing::error!("Error logging in: {}", session.err().unwrap());
+        return HttpResponse::InternalServerError().body("Failed to log in");
+    }
+
+    let oauth_url: Result<&str, Error> = Ok("http://localhost:8887");
 
     match oauth_url {
         Ok(url) => HttpResponse::Found()
@@ -300,58 +277,14 @@ async fn oauth_github_callback(
 }
 
 #[actix_web::get("/oauth/callback")]
-async fn oauth_callback(
-    query: web::Query<CallbackParams>,
-    oauth_client: web::Data<OAuthClientType>,
-    session: Session,
-) -> impl Responder {
+async fn oauth_callback(session: Session, oauth: web::Data<OauthClientType>) -> impl Responder {
     let secret = env::var("JWT_SECRET");
 
     if secret.is_err() {
         tracing::error!("JWT_SECRET environment variable is not set");
         return HttpResponse::InternalServerError().finish();
     }
-
-    let params = query.into_inner();
-    match oauth_client.callback(params).await {
-        Ok((bsky_session, _)) => {
-            let agent = Agent::new(bsky_session);
-            match agent.did().await {
-                Some(did) => {
-                    tracing::info!("ATProto login successful for DID: {}", did.to_string());
-                    session.insert("did", &did).unwrap();
-
-                    let access_token = jsonwebtoken::encode(
-                        &jsonwebtoken::Header::default(),
-                        &Claims {
-                            sub: did.to_string(),
-                            exp: chrono::Utc::now().timestamp() + 3600 * 24 * 7,
-                            iat: chrono::Utc::now().timestamp(),
-                        },
-                        &EncodingKey::from_secret(env::var("JWT_SECRET").unwrap().as_ref()),
-                    )
-                    .unwrap();
-
-                    session.insert("access_token", &access_token).unwrap();
-
-                    let origin = format!(
-                        "{}{}",
-                        env::var("ORIGIN").unwrap_or(String::from("http://localhost:8887")),
-                        "/"
-                    );
-
-                    HttpResponse::Found()
-                        .append_header(("Location", origin))
-                        .finish()
-                }
-                None => HttpResponse::InternalServerError().finish(),
-            }
-        }
-        Err(e) => {
-            tracing::error!("ATProto callback error: {:?}", e);
-            HttpResponse::BadRequest().body(format!("OAuth callback failed: {:?}", e))
-        }
-    }
+    HttpResponse::Ok().finish()
 }
 
 #[actix_web::get("/accesstoken")]
@@ -407,43 +340,16 @@ pub async fn run_http_server() -> Result<(), anyhow::Error> {
         .await
         .expect("Could not create the database");
 
-    let http_client = Arc::new(DefaultHttpClient::default());
-
-    let handle_resolver = CommonDidResolver::new(CommonDidResolverConfig {
-        plc_directory_url: DEFAULT_PLC_DIRECTORY_URL.to_string(),
-        http_client: http_client.clone(),
-    });
-    let handle_resolver = Arc::new(handle_resolver);
-
-    let http_client = Arc::new(DefaultHttpClient::default());
-    let config = OAuthClientConfig {
-        client_metadata: AtprotoLocalhostClientMetadata {
-            redirect_uris: Some(vec![String::from(format!(
-                "http://127.0.0.1:{port}/oauth/callback"
-            ))]),
-            scopes: Some(vec![
-                Scope::Known(KnownScope::Atproto),
-                Scope::Known(KnownScope::TransitionGeneric),
-            ]),
-        },
-        keys: None,
-        resolver: OAuthResolverConfig {
-            did_resolver: CommonDidResolver::new(CommonDidResolverConfig {
-                plc_directory_url: DEFAULT_PLC_DIRECTORY_URL.to_string(),
-                http_client: http_client.clone(),
-            }),
-            handle_resolver: AtprotoHandleResolver::new(AtprotoHandleResolverConfig {
-                dns_txt_resolver: HickoryDnsTxtResolver::default(),
-                http_client: http_client.clone(),
-            }),
-            authorization_server_metadata: Default::default(),
-            protected_resource_metadata: Default::default(),
-        },
-        state_store: SqliteStateStore::new(pool.clone()),
-        session_store: SqliteSessionStore::new(pool.clone()),
-    };
-    let client = Arc::new(OAuthClient::new(config).expect("failed to create OAuth client"));
     let arc_pool = Arc::new(pool.clone());
+
+    let store = SqliteSessionStore::new(pool.clone());
+    let client_data = jacquard_oauth::session::ClientData {
+        keyset: None,
+        // Default sets normal localhost redirect URIs and "atproto transition:generic" scopes.
+        // The localhost helper will ensure you have at least "atproto" and will fix urls
+        config: AtprotoClientMetadata::default_localhost(),
+    };
+    let oauth = Arc::new(OAuthClient::new(store, client_data));
 
     let client_id = option_env!("GITHUB_CLIENT_ID").unwrap().to_string();
     let oauth_client = BasicClient::new(ClientId::new(client_id))
@@ -482,9 +388,8 @@ let cors = Cors::default()
                     .build(),
             )
             .wrap(cors)
-            .app_data(web::Data::new(client.clone()))
+            .app_data(web::Data::new(oauth.clone()))
             .app_data(web::Data::new(arc_pool.clone()))
-            .app_data(web::Data::new(handle_resolver.clone()))
             .app_data(web::Data::new(app_state.clone()))
             .service(index)
             .service(sshkeys)

@@ -1,143 +1,140 @@
-use atrium_api::types::string::Did;
-use atrium_common::store::Store;
-use atrium_oauth::store::session::SessionStore;
-use atrium_oauth::store::state::StateStore;
+use dashmap::DashMap;
+use jacquard::client::{SessionStore, SessionStoreError};
+use jacquard::smol_str::{SmolStr, ToSmolStr};
+use jacquard::types::did::Did;
+use jacquard::IntoStatic;
+use jacquard_oauth::authstore::ClientAuthStore;
+use jacquard_oauth::session::{AuthRequestData, ClientSessionData};
 use serde::{de::DeserializeOwned, Serialize};
 use sqlx::Pool;
 use std::fmt::Debug;
 use std::hash::Hash;
-use thiserror::Error;
 
 use crate::repo;
 
-#[derive(Error, Debug)]
-pub enum SqliteStoreError {
-    #[error("Invalid session")]
-    InvalidSession,
-    #[error("No session found")]
-    NoSessionFound,
-    #[error("Database error: {0}")]
-    DatabaseError(sqlx::Error),
-}
-
-impl SessionStore for SqliteSessionStore {}
-
 pub struct SqliteSessionStore {
     pool: Pool<sqlx::Sqlite>,
+    auth_reqs: DashMap<SmolStr, AuthRequestData<'static>>,
 }
 
 impl SqliteSessionStore {
     pub fn new(pool: Pool<sqlx::Sqlite>) -> Self {
-        Self { pool }
+        Self {
+            pool,
+            auth_reqs: DashMap::new(),
+        }
     }
 }
 
-impl<K, V> Store<K, V> for SqliteSessionStore
+impl<K, V> SessionStore<K, V> for SqliteSessionStore
 where
-    K: Debug + Eq + Hash + Send + Sync + 'static + From<Did> + AsRef<str>,
+    K: Eq + Hash + Send + Sync + AsRef<str>,
     V: Debug + Clone + Send + Sync + 'static + Serialize + DeserializeOwned,
 {
-    type Error = SqliteStoreError;
-    async fn get(&self, key: &K) -> Result<Option<V>, Self::Error> {
+    async fn get(&self, key: &K) -> Option<V> {
         let did = key.as_ref();
-        let auth_session = repo::auth_session::get_by_did(&self.pool, did)
-            .await
-            .map_err(|e| SqliteStoreError::DatabaseError(e))?;
-        match auth_session {
-            Some(auth_session) => {
-                let deserialized_session: V = serde_json::from_str(&auth_session.session)
-                    .map_err(|_| SqliteStoreError::InvalidSession)?;
-                Ok(Some(deserialized_session))
-            }
-            None => Err(SqliteStoreError::NoSessionFound),
+        let auth_session = repo::auth_session::get_by_did(&self.pool, did).await;
+
+        if auth_session.is_err() {
+            return None;
         }
+
+        let auth_session = auth_session.unwrap();
+        if auth_session.is_none() {
+            return None;
+        }
+
+        let auth_session = auth_session.unwrap();
+        let deserialized_session = serde_json::from_str(&auth_session.session);
+
+        if deserialized_session.is_err() {
+            return None;
+        }
+
+        Some(deserialized_session.unwrap())
     }
 
-    async fn set(&self, key: K, value: V) -> Result<(), Self::Error> {
+    async fn set(&self, key: K, session: V) -> Result<(), SessionStoreError> {
         let did = key.as_ref().to_string();
         repo::auth_session::save_or_update(
             &self.pool,
             &did,
-            &serde_json::to_string(&value).map_err(|_| SqliteStoreError::InvalidSession)?,
+            &serde_json::to_string(&session).map_err(|e| SessionStoreError::Serde(e))?,
         )
         .await
-        .map_err(|e| SqliteStoreError::DatabaseError(e))?;
+        .map_err(|e| SessionStoreError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
         Ok(())
     }
 
-    async fn del(&self, key: &K) -> Result<(), Self::Error> {
+    async fn del(&self, key: &K) -> Result<(), SessionStoreError> {
         let did = key.as_ref();
         repo::auth_session::delete_by_did(&self.pool, did)
             .await
-            .map_err(|e| SqliteStoreError::DatabaseError(e))?;
-        Ok(())
-    }
-
-    async fn clear(&self) -> Result<(), Self::Error> {
-        repo::auth_session::delete_all(&self.pool)
-            .await
-            .map_err(|e| SqliteStoreError::DatabaseError(e))?;
+            .map_err(|e| {
+                SessionStoreError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+            })?;
         Ok(())
     }
 }
 
-impl StateStore for SqliteStateStore {}
-
-pub struct SqliteStateStore {
-    pool: Pool<sqlx::Sqlite>,
-}
-
-impl SqliteStateStore {
-    pub fn new(pool: Pool<sqlx::Sqlite>) -> Self {
-        Self { pool }
-    }
-}
-
-impl<K, V> Store<K, V> for SqliteStateStore
-where
-    K: Debug + Eq + Hash + Send + Sync + 'static + From<Did> + AsRef<str>,
-    V: Debug + Clone + Send + Sync + 'static + Serialize + DeserializeOwned,
-{
-    type Error = SqliteStoreError;
-    async fn get(&self, key: &K) -> Result<Option<V>, Self::Error> {
-        let did = key.as_ref();
-        let auth_state = repo::auth_state::get_by_key(&self.pool, did)
+impl ClientAuthStore for SqliteSessionStore {
+    async fn get_session(
+        &self,
+        did: &Did<'_>,
+        session_id: &str,
+    ) -> Result<Option<ClientSessionData<'_>>, SessionStoreError> {
+        let key = format!("{}_{}", did, session_id);
+        repo::auth_session::get_by_did(&self.pool, &key)
             .await
-            .map_err(|e| SqliteStoreError::DatabaseError(e))?;
-        match auth_state {
-            Some(auth_state) => {
-                let deserialized_state: V = serde_json::from_str(&auth_state.state)
-                    .map_err(|_| SqliteStoreError::InvalidSession)?;
-                Ok(Some(deserialized_state))
-            }
-            None => Err(SqliteStoreError::NoSessionFound),
-        }
+            .map_err(|e| {
+                SessionStoreError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+            })?;
+        Ok(None)
     }
 
-    async fn set(&self, key: K, value: V) -> Result<(), Self::Error> {
-        let did = key.as_ref().to_string();
-        repo::auth_state::save_or_update(
-            &self.pool,
-            &did,
-            &serde_json::to_string(&value).map_err(|_| SqliteStoreError::InvalidSession)?,
-        )
-        .await
-        .map_err(|e| SqliteStoreError::DatabaseError(e))?;
+    async fn upsert_session(
+        &self,
+        session: ClientSessionData<'_>,
+    ) -> Result<(), SessionStoreError> {
+        let key = format!("{}_{}", session.account_did, session.session_id);
+
         Ok(())
     }
 
-    async fn del(&self, key: &K) -> Result<(), Self::Error> {
-        let did = key.as_ref();
-        repo::auth_state::delete_by_key(&self.pool, did)
+    async fn delete_session(
+        &self,
+        did: &Did<'_>,
+        session_id: &str,
+    ) -> Result<(), SessionStoreError> {
+        let key = format!("{}_{}", did, session_id);
+        repo::auth_session::delete_by_did(&self.pool, &key)
             .await
-            .map_err(|e| SqliteStoreError::DatabaseError(e))?;
+            .map_err(|e| {
+                SessionStoreError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+            })?;
         Ok(())
     }
 
-    async fn clear(&self) -> Result<(), Self::Error> {
-        repo::auth_state::delete_all(&self.pool)
-            .await
-            .map_err(|e| SqliteStoreError::DatabaseError(e))?;
+    async fn get_auth_req_info(
+        &self,
+        state: &str,
+    ) -> Result<Option<AuthRequestData<'_>>, SessionStoreError> {
+        Ok(self.auth_reqs.get(state).map(|v| v.clone()))
+    }
+
+    async fn save_auth_req_info(
+        &self,
+        auth_req_info: &AuthRequestData<'_>,
+    ) -> Result<(), SessionStoreError> {
+        self.auth_reqs.insert(
+            auth_req_info.state.clone().to_smolstr(),
+            auth_req_info.clone().into_static(),
+        );
+        Ok(())
+    }
+
+    async fn delete_auth_req_info(&self, state: &str) -> Result<(), SessionStoreError> {
+        self.auth_reqs.remove(state);
         Ok(())
     }
 }
