@@ -1,0 +1,18 @@
+[package]
+name = "vmx-deno-ffi"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+vmx-server = { path = "../vmx-server" }
+deno_bindgen = "0.8.1"
+serde = { version = "1.0.228", features = ["derive"] }
+tokio = "1.48.0"
+anyhow = "1.0.100"

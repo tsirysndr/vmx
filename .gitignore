@@ -10,3 +10,4 @@ vmlinux
 *.bu
 *.ign
 seed
+target

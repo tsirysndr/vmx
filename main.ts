@@ -58,9 +58,7 @@ if (import.meta.main) {
     .name("vmx")
     .version(pkg.version)
     .description("Manage and run headless VMs using QEMU")
-    .arguments(
-      "[path-or-url-to-iso:string]",
-    )
+    .arguments("[path-or-url-to-iso:string]")
     .option("-o, --output <path:string>", "Output path for downloaded ISO")
     .option("-c, --cpu <type:string>", "Type of CPU to emulate", {
       default: "host",
@@ -90,18 +88,12 @@ if (import.meta.main) {
       "-b, --bridge <name:string>",
       "Name of the network bridge to use for networking (e.g., br0)",
     )
-    .option(
-      "-d, --detach",
-      "Run VM in the background and print VM name",
-    )
+    .option("-d, --detach", "Run VM in the background and print VM name")
     .option(
       "-p, --port-forward <mappings:string>",
       "Port forwarding rules in the format hostPort:guestPort (comma-separated for multiple)",
     )
-    .option(
-      "--install",
-      "Persist changes to the VM disk image",
-    )
+    .option("--install", "Persist changes to the VM disk image")
     .option(
       "--cloud",
       "Use cloud-init for initial configuration (only for compatible images)",
@@ -110,42 +102,18 @@ if (import.meta.main) {
       "--seed <path:string>",
       "Path to cloud-init seed image (ISO format)",
     )
-    .example(
-      "Create a default VM configuration file",
-      "vmx init",
-    )
-    .example(
-      "Local ISO file",
-      "vmx /path/to/image.iso",
-    )
+    .example("Create a default VM configuration file", "vmx init")
+    .example("Local ISO file", "vmx /path/to/image.iso")
     .example(
       "Download URL",
       "vmx https://cdimage.ubuntu.com/releases/24.04/release/ubuntu-24.04.3-live-server-arm64.iso",
     )
-    .example(
-      "From OCI Registry",
-      "vmx ghcr.io/tsirysndr/ubuntu:24.04",
-    )
-    .example(
-      "List running VMs",
-      "vmx ps",
-    )
-    .example(
-      "List all VMs",
-      "vmx ps --all",
-    )
-    .example(
-      "Start a VM",
-      "vmx start my-vm",
-    )
-    .example(
-      "Stop a VM",
-      "vmx stop my-vm",
-    )
-    .example(
-      "Inspect a VM",
-      "vmx inspect my-vm",
-    )
+    .example("From OCI Registry", "vmx ghcr.io/tsirysndr/ubuntu:24.04")
+    .example("List running VMs", "vmx ps")
+    .example("List all VMs", "vmx ps --all")
+    .example("Start a VM", "vmx start my-vm")
+    .example("Stop a VM", "vmx stop my-vm")
+    .example("Inspect a VM", "vmx inspect my-vm")
     .action(async (options: Options, input?: string) => {
       const program = Effect.gen(function* () {
         let isoPath: string | null = null;
@@ -157,10 +125,14 @@ if (import.meta.main) {
             Effect.catchAll(() => Effect.succeed(false)),
           );
           if (!seedExists) {
-            console.error(`Seed file ${options.seed} does not exist.`);
+            console.error(
+              `Seed file ${options.seed} does not exist.`,
+            );
             console.log(
               `Please run ${
-                chalk.greenBright(`vmx seed`)
+                chalk.greenBright(
+                  `vmx seed`,
+                )
               } to create a seed image.`,
             );
             Deno.exit(1);
@@ -218,7 +190,10 @@ if (import.meta.main) {
                 Effect.flatMap((xz) => extractXz(xz)),
               );
             } else {
-              isoPath = basename(coreOSImageURL).replace(".xz", "");
+              isoPath = basename(coreOSImageURL).replace(
+                ".xz",
+                "",
+              );
             }
           }
 
@@ -254,7 +229,10 @@ if (import.meta.main) {
               Effect.catchAll(() => Effect.succeed(false)),
             );
             if (!cached) {
-              isoPath = yield* downloadIso(fedoraImageURL, options);
+              isoPath = yield* downloadIso(
+                fedoraImageURL,
+                options,
+              );
             } else {
               isoPath = basename(fedoraImageURL);
             }
@@ -273,7 +251,10 @@ if (import.meta.main) {
               Effect.catchAll(() => Effect.succeed(false)),
             );
             if (!cached) {
-              isoPath = yield* downloadIso(gentooImageURL, options);
+              isoPath = yield* downloadIso(
+                gentooImageURL,
+                options,
+              );
             } else {
               isoPath = basename(gentooImageURL);
             }
@@ -292,7 +273,10 @@ if (import.meta.main) {
               Effect.catchAll(() => Effect.succeed(false)),
             );
             if (!cached) {
-              isoPath = yield* downloadIso(debianImageURL, options);
+              isoPath = yield* downloadIso(
+                debianImageURL,
+                options,
+              );
             } else {
               isoPath = basename(debianImageURL);
             }
@@ -311,7 +295,10 @@ if (import.meta.main) {
               Effect.catchAll(() => Effect.succeed(false)),
             );
             if (!cached) {
-              isoPath = yield* downloadIso(ubuntuImageURL, options);
+              isoPath = yield* downloadIso(
+                ubuntuImageURL,
+                options,
+              );
             } else {
               isoPath = basename(ubuntuImageURL);
             }
@@ -330,7 +317,10 @@ if (import.meta.main) {
               Effect.catchAll(() => Effect.succeed(false)),
             );
             if (!cached) {
-              isoPath = yield* downloadIso(alpineImageURL, options);
+              isoPath = yield* downloadIso(
+                alpineImageURL,
+                options,
+              );
             } else {
               isoPath = basename(alpineImageURL);
             }
@@ -349,7 +339,10 @@ if (import.meta.main) {
               Effect.catchAll(() => Effect.succeed(false)),
             );
             if (!cached) {
-              isoPath = yield* downloadIso(almalinuxImageURL, options);
+              isoPath = yield* downloadIso(
+                almalinuxImageURL,
+                options,
+              );
             } else {
               isoPath = basename(almalinuxImageURL);
             }
@@ -368,7 +361,10 @@ if (import.meta.main) {
               Effect.catchAll(() => Effect.succeed(false)),
             );
             if (!cached) {
-              isoPath = yield* downloadIso(rockylinuxImageURL, options);
+              isoPath = yield* downloadIso(
+                rockylinuxImageURL,
+                options,
+              );
             } else {
               isoPath = basename(rockylinuxImageURL);
             }
@@ -382,7 +378,9 @@ if (import.meta.main) {
           Effect.catchAll((error) => {
             if (error instanceof NoSuchFileError) {
               console.log(
-                chalk.yellowBright(`No vmconfig.toml file found, please run:`),
+                chalk.yellowBright(
+                  `No vmconfig.toml file found, please run:`,
+                ),
                 chalk.greenBright("vmx init"),
               );
               Deno.exit(1);
@@ -391,7 +389,7 @@ if (import.meta.main) {
           }),
         );
 
-        if (!input && (isValidISOurl(config?.vm?.iso))) {
+        if (!input && isValidISOurl(config?.vm?.iso)) {
           isoPath = yield* downloadIso(config!.vm!.iso!, options);
         }
 
@@ -409,10 +407,16 @@ if (import.meta.main) {
               Effect.catchAll(() => Effect.succeed(false)),
             );
             if (!cached) {
-              const xz = yield* downloadIso(coreOSImageURL, options);
+              const xz = yield* downloadIso(
+                coreOSImageURL,
+                options,
+              );
               isoPath = yield* extractXz(xz);
             } else {
-              isoPath = basename(coreOSImageURL).replace(".xz", "");
+              isoPath = basename(coreOSImageURL).replace(
+                ".xz",
+                "",
+              );
             }
           }
         }
@@ -444,7 +448,10 @@ if (import.meta.main) {
       await Effect.runPromise(program);
     })
     .command("ps", "List all virtual machines")
-    .option("--all, -a", "Show all virtual machines, including stopped ones")
+    .option(
+      "--all, -a",
+      "Show all virtual machines, including stopped ones",
+    )
     .action(async (options: { all?: unknown }) => {
       await ps(Boolean(options.all));
     })
@@ -478,10 +485,7 @@ if (import.meta.main) {
       "-b, --bridge <name:string>",
       "Name of the network bridge to use for networking (e.g., br0)",
     )
-    .option(
-      "-d, --detach",
-      "Run VM in the background and print VM name",
-    )
+    .option("-d, --detach", "Run VM in the background and print VM name")
     .option(
       "-p, --port-forward <mappings:string>",
       "Port forwarding rules in the format hostPort:guestPort (comma-separated for multiple)",
@@ -495,7 +499,10 @@ if (import.meta.main) {
       "Path to cloud-init seed image (ISO format)",
     )
     .action(async (options: unknown, vmName: string) => {
-      await start(vmName, Boolean((options as { detach: boolean }).detach));
+      await start(
+        vmName,
+        Boolean((options as { detach: boolean }).detach),
+      );
     })
     .command("stop", "Stop a virtual machine")
     .arguments("<vm-name:string>")
@@ -516,7 +523,10 @@ if (import.meta.main) {
     .option("--follow, -f", "Follow log output")
     .arguments("<vm-name:string>")
     .action(async (options: unknown, vmName: string) => {
-      await logs(vmName, Boolean((options as { follow: boolean }).follow));
+      await logs(
+        vmName,
+        Boolean((options as { follow: boolean }).follow),
+      );
     })
     .command("restart", "Restart a virtual machine")
     .arguments("<vm-name:string>")
@@ -582,7 +592,9 @@ if (import.meta.main) {
 
       console.log(
         `Authenticating to registry ${chalk.greenBright(registry)} as ${
-          chalk.greenBright(username)
+          chalk.greenBright(
+            username,
+          )
         }...`,
       );
       await login(username, password, registry);
@@ -616,10 +628,7 @@ if (import.meta.main) {
       "-b, --bridge <name:string>",
       "Name of the network bridge to use for networking (e.g., br0)",
     )
-    .option(
-      "-d, --detach",
-      "Run VM in the background and print VM name",
-    )
+    .option("-d, --detach", "Run VM in the background and print VM name")
     .option(
       "-p, --port-forward <mappings:string>",
       "Port forwarding rules in the format hostPort:guestPort (comma-separated for multiple)",
@@ -659,9 +668,11 @@ if (import.meta.main) {
     )
     .description("Manage volumes")
     .command("serve", "Start the HTTP API server")
-    .option("-p, --port <port:number>", "Port to listen on", { default: 8889 })
-    .action(() => {
-      serve();
+    .option("-p, --port <port:number>", "Port to listen on", {
+      default: 8889,
+    })
+    .action(async () => {
+      await serve();
     })
     .command(
       "seed",

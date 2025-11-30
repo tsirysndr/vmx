@@ -4,7 +4,9 @@
   "exports": "./main.ts",
   "license": "MPL-2.0",
   "tasks": {
-    "dev": "deno run --env-file=.env -A --watch main.ts"
+    "dev": "deno run --env-file=.env -A --watch main.ts",
+    "build:ffi": "deno run --allow-run --allow-read --allow-write --env-file=.env scripts/build_ffi.ts",
+    "test:ffi": "deno run --allow-ffi --allow-read test_ffi.ts"
   },
   "imports": {
     "@cliffy/command": "jsr:@cliffy/command@^1.0.0-rc.8",
@@ -12,6 +14,7 @@
     "@cliffy/prompt": "jsr:@cliffy/prompt@^1.0.0-rc.8",
     "@cliffy/table": "jsr:@cliffy/table@^1.0.0-rc.8",
     "@db/sqlite": "jsr:@db/sqlite@^0.12.0",
+    "@denosaurs/plug": "jsr:@denosaurs/plug@^1.1.0",
     "@es-toolkit/es-toolkit": "jsr:@es-toolkit/es-toolkit@^1.41.0",
     "@hono/swagger-ui": "npm:@hono/swagger-ui@^0.5.2",
     "@paralleldrive/cuid2": "npm:@paralleldrive/cuid2@^3.0.4",
@@ -28,5 +31,15 @@
     "hono": "npm:hono@^4.10.6",
     "kysely": "npm:kysely@0.27.6",
     "moniker": "npm:moniker@^0.1.2"
+  },
+  "fmt": {
+    "exclude": [
+      "webui",
+      ".github",
+      ".tangled",
+      "crates",
+      "bindings",
+      "bindings.json"
+    ]
   }
 }
