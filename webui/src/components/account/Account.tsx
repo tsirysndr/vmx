@@ -1,7 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
+import { Profile } from "../../types/profile";
 
-function Account() {
+type AccountProps = {
+  profile: Profile;
+};
+
+function Account(props: AccountProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -38,11 +43,24 @@ function Account() {
           className="flex items-center space-x-3 w-full p-2 transition-colors"
         >
           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-(--color-fuschia) text-(--color-slate)">
-            <span className="icon-[tabler--user] size-5"></span>
+            {!props.profile.avatar_url && (
+              <span className="icon-[tabler--user] size-5"></span>
+            )}
+            {props.profile.avatar_url && (
+              <img
+                src={props.profile.avatar_url}
+                alt="avatar"
+                className="rounded-full"
+              />
+            )}
           </div>
           <div className="flex-1 min-w-0 text-left">
-            <p className="text-sm font-medium truncate">Admin</p>
-            <p className="text-xs text-gray-500 truncate"></p>
+            <p className="text-sm font-medium truncate">
+              {props.profile.display_name}
+            </p>
+            <p className="text-xs text-gray-500 truncate">
+              {props.profile.handle}
+            </p>
           </div>
           <span className="icon-[tabler--dots-vertical] size-4 flex-shrink-0"></span>
         </button>

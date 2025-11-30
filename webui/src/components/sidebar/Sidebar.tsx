@@ -4,7 +4,6 @@ import { useProfileQuery } from "../../hooks/useProfile";
 
 function Sidebar() {
   const { data: profile } = useProfileQuery();
-  console.log(">> profile", profile);
   return (
     <>
       <div>
@@ -49,7 +48,7 @@ function Sidebar() {
             </div>
             <div className="flex-grow"></div>
             <div className="flex-shrink-0 overflow-visible">
-              <Account />
+              {profile && <Account profile={profile} />}
             </div>
           </div>
         </aside>

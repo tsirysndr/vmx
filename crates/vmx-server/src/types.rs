@@ -83,3 +83,13 @@ pub struct Plan {
     pub private_repos: u64,
     pub collaborators: u64,
 }
+
+impl From<GithubProfile> for UserProfile {
+    fn from(value: GithubProfile) -> Self {
+        Self {
+            display_name: value.name,
+            handle: value.login,
+            avatar_url: Some(value.avatar_url),
+        }
+    }
+}

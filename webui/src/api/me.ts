@@ -1,4 +1,5 @@
 import { API_URL } from "../consts";
+import { Profile } from "../types/profile";
 
 export const fetchProfile = async () => {
   const res = await fetch(`${API_URL}/me`, {
@@ -12,5 +13,5 @@ export const fetchProfile = async () => {
   }
 
   const data = await res.json();
-  return data;
+  return data as Profile;
 };

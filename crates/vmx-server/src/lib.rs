@@ -1,10 +1,11 @@
-use std::{collections::HashMap, env, str::FromStr, sync::Arc};
+use std::{collections::HashMap, env, sync::Arc};
 
 use crate::{
     auth::{decode_authorization_header, read_token_file, validate_token},
     db::create_tables_in_database,
+    github::Github,
     storage::SqliteSessionStore,
-    types::{AccessToken, Claims, GithubProfile, LoginRequest},
+    types::{AccessToken, Claims, LoginRequest, UserProfile},
 };
 use actix_cors::Cors;
 use actix_session::{storage::CookieSessionStore, Session, SessionMiddleware};
@@ -13,8 +14,8 @@ use actix_web::{
 };
 use awc::Client;
 use dotenv::dotenv;
-use jacquard::api::app_bsky::actor::profile::Profile;
 use jacquard::prelude::XrpcClient;
+use jacquard::{api::app_bsky::actor::profile::Profile, prelude::IdentityResolver};
 use jacquard::{api::com_atproto::repo::list_records::ListRecords, client::AgentSessionExt};
 use jacquard::{
     client::Agent, identity::JacquardResolver, oauth::client::OAuthClient, types::did::Did,
@@ -40,6 +41,7 @@ use url::Url;
 pub mod auth;
 pub mod db;
 pub mod entity;
+pub mod github;
 pub mod repo;
 pub mod storage;
 pub mod types;
@@ -176,6 +178,7 @@ async fn me(
     req: HttpRequest,
     oauth: web::Data<Arc<OauthClientType>>,
     pool: web::Data<Arc<Pool<Sqlite>>>,
+    kv: web::Data<Arc<Mutex<HashMap<String, String>>>>,
 ) -> impl Responder {
     let did = decode_authorization_header(req.headers());
 
@@ -185,10 +188,29 @@ async fn me(
 
     let did = did.unwrap().unwrap();
 
-    if !did.starts_with("did:") {
+    if !did.starts_with("did:") && !did.starts_with("gh:") {
         return HttpResponse::Ok().json(json!({
-            "user": "admin"
+            "handle": "admin"
         }));
+    }
+
+    if did.starts_with("gh:") {
+        let kv = kv.lock().await;
+        let access_token = kv.get(&did);
+
+        if access_token.is_none() {
+            return HttpResponse::Unauthorized().body("Unauthorized");
+        }
+
+        let gh = Github::new(access_token.unwrap());
+        let profile = gh.get_user().await;
+        if let Err(err) = profile {
+            tracing::info!(err = ?err, "failed to get github user");
+            return HttpResponse::InternalServerError().finish();
+        }
+
+        let profile = profile.unwrap();
+        return HttpResponse::Ok().json(UserProfile::from(profile));
     }
 
     let did = Did::new(did.as_str().into());
@@ -241,7 +263,28 @@ async fn me(
 
     let response = response.unwrap();
     let record: Profile<'_> = response.into();
-    HttpResponse::Ok().json(record)
+    let did_doc = oauth.resolve_did_doc(&did).await.unwrap();
+    let did_doc = did_doc.parse().unwrap();
+    let handle = did_doc.handles().into_iter().next();
+    let handle = handle.unwrap();
+    HttpResponse::Ok().json(UserProfile {
+        display_name: record.display_name.map(|name| name.to_string()),
+        avatar_url: record.avatar.map(|avatar| {
+            format!(
+                "https://cdn.bsky.app/img/avatar/plain/{}/{}@{}",
+                did.to_string().replace("at://", ""),
+                avatar.blob().r#ref.to_string(),
+                avatar
+                    .blob()
+                    .mime_type
+                    .to_string()
+                    .split("/")
+                    .last()
+                    .unwrap_or("unknown")
+            )
+        }),
+        handle: format!("@{}", handle.to_string()),
+    })
 }
 
 // Proxy to backend API server
@@ -401,20 +444,8 @@ async fn oauth_github_callback(
             }
 
             let gh_token = token_result.unwrap().access_token().secret().clone();
-            let client = reqwest::Client::new();
-            let response = client
-                .get("https://api.github.com/user")
-                .header("User-Agent", "vmx")
-                .bearer_auth(&gh_token)
-                .send()
-                .await;
-
-            if response.is_err() {
-                tracing::error!("Failed to fetch user info");
-                return HttpResponse::InternalServerError().finish();
-            }
-
-            let profile = response.unwrap().json::<GithubProfile>().await;
+            let gh = Github::new(&gh_token);
+            let profile = gh.get_user().await;
 
             if profile.is_err() {
                 tracing::error!("Failed to parse user info");
@@ -422,7 +453,6 @@ async fn oauth_github_callback(
             }
 
             let profile = profile.unwrap();
-            session.insert("gh_access_token", &gh_token).unwrap();
 
             let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
 
@@ -436,9 +466,10 @@ async fn oauth_github_callback(
                 &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
             )
             .unwrap();
-            let mut kv = kv.lock().await;
+            let mut kv_mutex = kv.lock().await;
             let id = cuid2::create_id();
-            kv.insert(id.clone(), access_token);
+            kv_mutex.insert(id.clone(), access_token);
+            kv_mutex.insert(format!("gh:{}", profile.login), gh_token);
 
             let origin = format!(
                 "{}?id={}",
