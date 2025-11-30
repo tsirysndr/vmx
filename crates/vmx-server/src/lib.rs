@@ -4,7 +4,7 @@ use crate::{
     auth::{decode_authorization_header, read_token_file, validate_token},
     db::create_tables_in_database,
     storage::SqliteSessionStore,
-    types::{AccessToken, Claims, LoginRequest},
+    types::{AccessToken, Claims, GithubProfile, LoginRequest},
 };
 use actix_cors::Cors;
 use actix_session::{storage::CookieSessionStore, Session, SessionMiddleware};
@@ -13,9 +13,9 @@ use actix_web::{
 };
 use awc::Client;
 use dotenv::dotenv;
-use jacquard::api::com_atproto::repo::list_records::ListRecords;
+use jacquard::api::app_bsky::actor::profile::Profile;
 use jacquard::prelude::XrpcClient;
-use jacquard::{api::com_atproto::repo::get_record::GetRecord, types::string::RecordKey};
+use jacquard::{api::com_atproto::repo::list_records::ListRecords, client::AgentSessionExt};
 use jacquard::{
     client::Agent, identity::JacquardResolver, oauth::client::OAuthClient, types::did::Did,
 };
@@ -230,16 +230,9 @@ async fn me(
     let info = info.unwrap();
     tracing::info!(did = ?info, "ATProto login successful for DID");
 
-    let did = info.0.replace("at://", "");
-    let response = agent
-        .send(
-            GetRecord::new()
-                .repo(did)
-                .collection("app.bsky.actor.profile".to_string())
-                .rkey(RecordKey::from_str("self").unwrap())
-                .build(),
-        )
-        .await;
+    let uri = format!("at://{}/app.bsky.actor.profile/self", info.0);
+    let uri = Profile::uri(uri).unwrap();
+    let response = agent.fetch_record(&uri).await;
 
     if response.is_err() {
         tracing::error!("Failed to get profile: {}", response.err().unwrap());
@@ -247,8 +240,8 @@ async fn me(
     }
 
     let response = response.unwrap();
-    let output = response.into_output().unwrap();
-    HttpResponse::Ok().json(output.value)
+    let record: Profile<'_> = response.into();
+    HttpResponse::Ok().json(record)
 }
 
 // Proxy to backend API server
@@ -421,7 +414,7 @@ async fn oauth_github_callback(
                 return HttpResponse::InternalServerError().finish();
             }
 
-            let profile = response.unwrap().json::<serde_json::Value>().await;
+            let profile = response.unwrap().json::<GithubProfile>().await;
 
             if profile.is_err() {
                 tracing::error!("Failed to parse user info");
@@ -436,7 +429,7 @@ async fn oauth_github_callback(
             let access_token = jsonwebtoken::encode(
                 &jsonwebtoken::Header::default(),
                 &Claims {
-                    sub: format!("gh:{}", profile["login"].as_str().unwrap()),
+                    sub: format!("gh:{}", profile.login),
                     exp: chrono::Utc::now().timestamp() + 3600 * 24 * 7,
                     iat: chrono::Utc::now().timestamp(),
                 },
