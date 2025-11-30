@@ -1,7 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import Account from "../account";
+import { useProfileQuery } from "../../hooks/useProfile";
 
 function Sidebar() {
+  const { data: profile } = useProfileQuery();
+  console.log(">> profile", profile);
   return (
     <>
       <div>

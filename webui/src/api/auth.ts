@@ -21,9 +21,9 @@ export const loginWithATProto = (handle: string) => {
 };
 
 export const getAccessToken = async (id: string) => {
-  const res = await fetch(
-    `${API_URL.replace(/\/api/, "")}/accesstoken?id=${id}`,
-  );
+  const res = await fetch(`${API_URL}/accesstoken?id=${id}`, {
+    credentials: "include",
+  });
 
   if (!res.ok) {
     throw new Error("Failed to get access token");

@@ -1,7 +1,7 @@
-use std::{collections::HashMap, env, sync::Arc};
+use std::{collections::HashMap, env, str::FromStr, sync::Arc};
 
 use crate::{
-    auth::{read_token_file, validate_token},
+    auth::{decode_authorization_header, read_token_file, validate_token},
     db::create_tables_in_database,
     storage::SqliteSessionStore,
     types::{AccessToken, Claims, LoginRequest},
@@ -15,6 +15,7 @@ use awc::Client;
 use dotenv::dotenv;
 use jacquard::api::com_atproto::repo::list_records::ListRecords;
 use jacquard::prelude::XrpcClient;
+use jacquard::{api::com_atproto::repo::get_record::GetRecord, types::string::RecordKey};
 use jacquard::{
     client::Agent, identity::JacquardResolver, oauth::client::OAuthClient, types::did::Did,
 };
@@ -30,6 +31,7 @@ use oauth2::{
 };
 use oauth2::{AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
 use rust_embed::RustEmbed;
+use serde_json::json;
 use sqlx::{sqlite::SqliteConnectOptions, Pool, Sqlite};
 use tokio::{fs, sync::Mutex};
 use tracing_subscriber::fmt::format::Format;
@@ -71,6 +73,37 @@ fn handle_embedded_file(path: &str) -> HttpResponse {
 #[actix_web::get("/")]
 async fn index() -> impl Responder {
     handle_embedded_file("index.html")
+}
+
+#[actix_web::get("/api/accesstoken")]
+async fn get_access_token(
+    query: web::Query<HashMap<String, String>>,
+    kv: web::Data<Arc<Mutex<HashMap<String, String>>>>,
+) -> HttpResponse {
+    let id = query["id"].clone();
+
+    if id.is_empty() {
+        tracing::info!("Empty id provided");
+        return HttpResponse::BadRequest().finish();
+    }
+
+    let kv_mutex = kv.lock().await;
+    let access_token = kv_mutex.get(&id);
+
+    if access_token.is_none() {
+        tracing::info!("Access token not found for id: {}", id);
+        return HttpResponse::Unauthorized().finish();
+    }
+
+    let access_token = access_token.unwrap();
+    let access_token = access_token.clone();
+
+    drop(kv_mutex);
+
+    let mut kv_mutex = kv.lock().await;
+    kv_mutex.remove(&id);
+
+    HttpResponse::Ok().json(AccessToken { access_token })
 }
 
 #[actix_web::get("/api/sshkeys")]
@@ -118,7 +151,6 @@ async fn sshkeys(
     tracing::info!(did = ?info, "ATProto login successful for DID");
 
     let did = info.0.replace("at://", "");
-    println!("DID: {}", did);
     let response = agent
         .send(
             ListRecords::new()
@@ -137,6 +169,86 @@ async fn sshkeys(
     let response = response.unwrap();
     let output = response.into_output().unwrap();
     HttpResponse::Ok().json(output.records)
+}
+
+#[actix_web::get("/api/me")]
+async fn me(
+    req: HttpRequest,
+    oauth: web::Data<Arc<OauthClientType>>,
+    pool: web::Data<Arc<Pool<Sqlite>>>,
+) -> impl Responder {
+    let did = decode_authorization_header(req.headers());
+
+    if let Err(err) = did {
+        return HttpResponse::Unauthorized().body(err.to_string());
+    }
+
+    let did = did.unwrap().unwrap();
+
+    if !did.starts_with("did:") {
+        return HttpResponse::Ok().json(json!({
+            "user": "admin"
+        }));
+    }
+
+    let did = Did::new(did.as_str().into());
+    if did.is_err() {
+        return HttpResponse::BadRequest().body("Invalid DID");
+    }
+    let did = did.unwrap();
+
+    let auth_session = repo::auth_session::get_by_did(&pool, did.as_str()).await;
+    if auth_session.is_err() {
+        return HttpResponse::Unauthorized().body("Unauthorized");
+    }
+
+    let auth_session = auth_session.unwrap();
+
+    if auth_session.is_none() {
+        return HttpResponse::Unauthorized().body("Unauthorized");
+    }
+
+    let auth_session = auth_session.unwrap();
+    let auth_session: serde_json::Value = serde_json::from_str(&auth_session.session).unwrap();
+    let session = oauth
+        .restore(&did, auth_session["session_id"].as_str().unwrap())
+        .await;
+
+    if let Err(err) = session {
+        tracing::error!("Failed to restore session: {}", err);
+        return HttpResponse::InternalServerError().body("Can't restore session");
+    }
+
+    let session = session.unwrap();
+
+    let agent = Agent::new(session);
+    let info = agent.info().await;
+    if info.is_none() {
+        tracing::error!("Failed to get agent info");
+        return HttpResponse::InternalServerError().body("Can't get agent info");
+    }
+    let info = info.unwrap();
+    tracing::info!(did = ?info, "ATProto login successful for DID");
+
+    let did = info.0.replace("at://", "");
+    let response = agent
+        .send(
+            GetRecord::new()
+                .repo(did)
+                .collection("app.bsky.actor.profile".to_string())
+                .rkey(RecordKey::from_str("self").unwrap())
+                .build(),
+        )
+        .await;
+
+    if response.is_err() {
+        tracing::error!("Failed to get profile: {}", response.err().unwrap());
+        return HttpResponse::InternalServerError().body("Can't get profile");
+    }
+
+    let response = response.unwrap();
+    let output = response.into_output().unwrap();
+    HttpResponse::Ok().json(output.value)
 }
 
 // Proxy to backend API server
@@ -419,37 +531,6 @@ async fn oauth_callback(
         .finish()
 }
 
-#[actix_web::get("/accesstoken")]
-async fn get_access_token(
-    query: web::Query<HashMap<String, String>>,
-    kv: web::Data<Arc<Mutex<HashMap<String, String>>>>,
-) -> HttpResponse {
-    let id = query["id"].clone();
-
-    if id.is_empty() {
-        tracing::info!("Empty id provided");
-        return HttpResponse::BadRequest().finish();
-    }
-
-    let kv_mutex = kv.lock().await;
-    let access_token = kv_mutex.get(&id);
-
-    if access_token.is_none() {
-        tracing::info!("Access token not found for id: {}", id);
-        return HttpResponse::Unauthorized().finish();
-    }
-
-    let access_token = access_token.unwrap();
-    let access_token = access_token.clone();
-
-    drop(kv_mutex);
-
-    let mut kv_mutex = kv.lock().await;
-    kv_mutex.remove(&id);
-
-    HttpResponse::Ok().json(AccessToken { access_token })
-}
-
 pub async fn run_http_server() -> Result<(), anyhow::Error> {
     dotenv().ok();
 
@@ -550,12 +631,13 @@ pub async fn run_http_server() -> Result<(), anyhow::Error> {
             .app_data(web::Data::new(kv.clone()))
             .service(index)
             .service(sshkeys)
+            .service(me)
+            .service(get_access_token)
             .service(api)
             .service(login)
             .service(login_with_github)
             .service(oauth_callback)
             .service(oauth_github_callback)
-            .service(get_access_token)
             .service(spa_routes)
             .service(dist)
     })
