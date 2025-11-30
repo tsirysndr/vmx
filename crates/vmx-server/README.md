@@ -174,7 +174,6 @@ The proxy handles errors gracefully:
 | Network Error       | 502 Bad Gateway | Network issue during request    |
 | Response Read Error | 502 Bad Gateway | Failed to read backend response |
 
-All errors are logged to stderr with `eprintln!`.
 
 ## Configuration
 

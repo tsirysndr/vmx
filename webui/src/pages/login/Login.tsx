@@ -29,16 +29,13 @@ function Login() {
     });
   };
 
-  const onSignInWithGithub = async () => {
-    const { auth_url } = await loginWithGithub();
-    window.location.href = auth_url;
+  const onSignInWithGithub = () => {
+    loginWithGithub();
   };
 
-  const onSignInWithATProto = async () => {
+  const onSignInWithATProto = () => {
     setLoading(true);
-    const { auth_url } = await loginWithATProto(handle);
-    setLoading(false);
-    window.location.href = auth_url;
+    loginWithATProto(handle);
   };
 
   return (

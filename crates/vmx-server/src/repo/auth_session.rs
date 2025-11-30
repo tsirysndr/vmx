@@ -8,7 +8,7 @@ pub async fn get_by_did(
 ) -> Result<Option<AuthSession>, sqlx::Error> {
     let session = sqlx::query_as(
         r#"
-            SELECT * FROM auth_sessions WHERE did = ?
+            SELECT * FROM auth_sessions WHERE key = ?
         "#,
     )
     .bind(did)
@@ -20,7 +20,8 @@ pub async fn get_by_did(
 
 pub async fn save_or_update(
     pool: &Pool<sqlx::Sqlite>,
-    session: &AuthSession,
+    key: &str,
+    session: &str,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
@@ -29,9 +30,9 @@ pub async fn save_or_update(
             ON CONFLICT (key) DO UPDATE SET session = ?, updated_at = CURRENT_TIMESTAMP
         "#,
     )
-    .bind(&session.key)
-    .bind(&session.session)
-    .bind(&session.session) // Note: need to bind again for the UPDATE clause
+    .bind(key)
+    .bind(session)
+    .bind(session) // Note: need to bind again for the UPDATE clause
     .execute(pool)
     .await?;
 
@@ -41,7 +42,7 @@ pub async fn save_or_update(
 pub async fn delete_by_did(pool: &Pool<sqlx::Sqlite>, did: &str) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
-            DELETE FROM auth_sessions WHERE did = ?
+            DELETE FROM auth_sessions WHERE key = ?
         "#,
     )
     .bind(did)

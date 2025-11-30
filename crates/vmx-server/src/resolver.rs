@@ -20,7 +20,7 @@ impl DnsTxtResolver for HickoryDnsTxtResolver {
         &self,
         query: &str,
     ) -> core::result::Result<Vec<String>, Box<dyn std::error::Error + Send + Sync + 'static>> {
-        println!("Resolving TXT for: {}", query);
+        tracing::info!("Resolving TXT for: {}", query);
         Ok(self
             .resolver
             .txt_lookup(query)

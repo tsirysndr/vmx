@@ -6,18 +6,22 @@ pub async fn create_tables_in_database(pool: &Pool<sqlx::Sqlite>) -> Result<(), 
         .await?;
 
     sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS auth_session (
+        r#"CREATE TABLE IF NOT EXISTS auth_sessions (
             key TEXT PRIMARY KEY,
-            session TEXT NOT NULL
+            session TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );"#,
     )
     .execute(pool)
     .await?;
 
     sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS auth_state (
+        r#"CREATE TABLE IF NOT EXISTS auth_states (
             key TEXT PRIMARY KEY,
-            state TEXT NOT NULL
+            state TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );"#,
     )
     .execute(pool)

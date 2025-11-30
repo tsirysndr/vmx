@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
@@ -5,4 +6,5 @@ use sqlx::FromRow;
 pub struct AuthState {
     pub key: String,
     pub state: String,
+    pub created_at: DateTime<Utc>,
 }

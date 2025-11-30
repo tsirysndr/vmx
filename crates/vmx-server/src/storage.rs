@@ -8,8 +8,6 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use thiserror::Error;
 
-use crate::entity::auth_session::AuthSession;
-use crate::entity::auth_state::AuthState;
 use crate::repo;
 
 #[derive(Error, Debug)]
@@ -59,11 +57,8 @@ where
         let did = key.as_ref().to_string();
         repo::auth_session::save_or_update(
             &self.pool,
-            &AuthSession {
-                key: did,
-                session: serde_json::to_string(&value)
-                    .map_err(|_| SqliteStoreError::InvalidSession)?,
-            },
+            &did,
+            &serde_json::to_string(&value).map_err(|_| SqliteStoreError::InvalidSession)?,
         )
         .await
         .map_err(|e| SqliteStoreError::DatabaseError(e))?;
@@ -123,11 +118,8 @@ where
         let did = key.as_ref().to_string();
         repo::auth_state::save_or_update(
             &self.pool,
-            &AuthState {
-                key: did,
-                state: serde_json::to_string(&value)
-                    .map_err(|_| SqliteStoreError::InvalidSession)?,
-            },
+            &did,
+            &serde_json::to_string(&value).map_err(|_| SqliteStoreError::InvalidSession)?,
         )
         .await
         .map_err(|e| SqliteStoreError::DatabaseError(e))?;
