@@ -10,12 +10,14 @@ use actix_session::{storage::CookieSessionStore, Session, SessionMiddleware};
 use actix_web::{
     cookie::Key, middleware, web, App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
-use anyhow::Error;
-use atrium_api::types::string::Did;
 use awc::Client;
 use dotenv::dotenv;
-use jacquard::{identity::JacquardResolver, oauth::client::OAuthClient};
-use jacquard_oauth::{atproto::AtprotoClientMetadata, loopback::LoopbackConfig};
+use jacquard::{identity::JacquardResolver, oauth::client::OAuthClient, types::did::Did};
+use jacquard_oauth::{
+    atproto::{AtprotoClientMetadata, GrantType},
+    scopes::{Scope, TransitionScope},
+    types::AuthorizeOptions,
+};
 use jsonwebtoken::EncodingKey;
 use mime_guess::from_path;
 use oauth2::{
@@ -28,11 +30,11 @@ use serde_json::json;
 use sqlx::sqlite::SqliteConnectOptions;
 use tokio::fs;
 use tracing_subscriber::fmt::format::Format;
+use url::Url;
 
 pub mod db;
 pub mod entity;
 pub mod repo;
-pub mod resolver;
 pub mod storage;
 pub mod types;
 
@@ -149,22 +151,12 @@ async fn spa_routes() -> impl Responder {
 #[actix_web::get("/oauth/login")]
 async fn login(
     query: web::Query<LoginRequest>,
-    oauth: web::Data<OauthClientType>,
+    oauth: web::Data<Arc<OauthClientType>>,
 ) -> impl Responder {
     let query = query.into_inner();
-    let session = oauth
-        .login_with_local_server(
-            query.handle.clone(),
-            Default::default(),
-            LoopbackConfig::default(),
-        )
+    let oauth_url = oauth
+        .start_auth(query.handle.clone(), AuthorizeOptions::default())
         .await;
-    if session.is_err() {
-        tracing::error!("Error logging in: {}", session.err().unwrap());
-        return HttpResponse::InternalServerError().body("Failed to log in");
-    }
-
-    let oauth_url: Result<&str, Error> = Ok("http://localhost:8887");
 
     match oauth_url {
         Ok(url) => HttpResponse::Found()
@@ -277,14 +269,19 @@ async fn oauth_github_callback(
 }
 
 #[actix_web::get("/oauth/callback")]
-async fn oauth_callback(session: Session, oauth: web::Data<OauthClientType>) -> impl Responder {
+async fn oauth_callback(
+    session: Session,
+    oauth: web::Data<Arc<OauthClientType>>,
+    query: web::Query<serde_json::Value>,
+) -> impl Responder {
+    println!("query:\n {:?}", query);
     let secret = env::var("JWT_SECRET");
 
     if secret.is_err() {
         tracing::error!("JWT_SECRET environment variable is not set");
         return HttpResponse::InternalServerError().finish();
     }
-    HttpResponse::Ok().finish()
+    HttpResponse::Ok().json(json!({ "message": "Success" }))
 }
 
 #[actix_web::get("/accesstoken")]
@@ -341,13 +338,20 @@ pub async fn run_http_server() -> Result<(), anyhow::Error> {
         .expect("Could not create the database");
 
     let arc_pool = Arc::new(pool.clone());
+    let origin = std::env::var("APP_ORIGIN").unwrap_or("http://127.0.0.1:8887".to_string());
 
     let store = SqliteSessionStore::new(pool.clone());
     let client_data = jacquard_oauth::session::ClientData {
         keyset: None,
-        // Default sets normal localhost redirect URIs and "atproto transition:generic" scopes.
-        // The localhost helper will ensure you have at least "atproto" and will fix urls
-        config: AtprotoClientMetadata::default_localhost(),
+        config: AtprotoClientMetadata::new_localhost(
+            Some(vec![
+                Url::parse(&format!("{origin}/oauth/callback")).unwrap()
+            ]),
+            Some(vec![
+                Scope::Atproto,
+                Scope::Transition(TransitionScope::Generic),
+            ]),
+        ),
     };
     let oauth = Arc::new(OAuthClient::new(store, client_data));
 
