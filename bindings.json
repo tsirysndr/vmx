@@ -1,1 +1,0 @@
-{"name":"vmx_deno_ffi","littleEndian":true,"symbols":{"add":{"parameters":["u64","u64"],"result":"u64","nonBlocking":true},"start_http_server":{"parameters":[],"result":"void","nonBlocking":true}},"typeDefs":{},"tsTypes":{}}

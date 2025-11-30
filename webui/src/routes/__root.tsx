@@ -4,17 +4,23 @@ import {
   redirect,
   useRouterState,
 } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "../components/sidebar";
+import z from "zod";
+import { getAccessToken } from "../api/auth";
 
 export const Route = createRootRoute({
-  beforeLoad: ({ location }) => {
+  validateSearch: z.object({
+    id: z.string().optional(),
+  }),
+  beforeLoad: ({ location, search }) => {
     const token = localStorage.getItem("token");
-    if (!token && location.pathname !== "/login") {
+    if (!token && location.pathname !== "/login" && !search.id) {
       throw redirect({
         to: "/login",
         replace: true,
       });
+      return;
     }
   },
   component: RootComponent,
@@ -23,10 +29,25 @@ export const Route = createRootRoute({
 function RootComponent() {
   const routerState = useRouterState();
   const isLoginPage = routerState.location.pathname === "/login";
+  const id = routerState.location.search.id;
+  const [token, setToken] = useState<string | null>(
+    localStorage.getItem("token"),
+  );
 
   useEffect(() => {
     document.documentElement.classList.add("dark");
   }, []);
+
+  useEffect(() => {
+    if (!id) {
+      return;
+    }
+
+    getAccessToken(id).then((accessToken) => {
+      localStorage.setItem("token", accessToken);
+      setToken(accessToken);
+    });
+  }, [id]);
 
   if (isLoginPage) {
     return (
@@ -36,7 +57,7 @@ function RootComponent() {
     );
   }
 
-  if (!localStorage.getItem("token")) {
+  if (!token) {
     return <></>;
   }
 

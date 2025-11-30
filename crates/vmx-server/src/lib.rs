@@ -1,6 +1,7 @@
 use std::{collections::HashMap, env, sync::Arc};
 
 use crate::{
+    auth::{read_token_file, validate_token},
     db::create_tables_in_database,
     storage::SqliteSessionStore,
     types::{AccessToken, Claims, LoginRequest},
@@ -29,12 +30,12 @@ use oauth2::{
 };
 use oauth2::{AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
 use rust_embed::RustEmbed;
-use serde_json::json;
 use sqlx::{sqlite::SqliteConnectOptions, Pool, Sqlite};
-use tokio::fs;
+use tokio::{fs, sync::Mutex};
 use tracing_subscriber::fmt::format::Format;
 use url::Url;
 
+pub mod auth;
 pub mod db;
 pub mod entity;
 pub mod repo;
@@ -166,10 +167,29 @@ async fn api(req: HttpRequest, path: web::Path<String>, body: web::Bytes) -> imp
         .request_from(target_url.as_str(), req.head())
         .no_decompress();
 
+    let mut authorization = String::new();
     for (header_name, header_value) in req.headers().iter() {
         if header_name != actix_web::http::header::HOST {
             forwarded_req =
                 forwarded_req.insert_header((header_name.clone(), header_value.clone()));
+        }
+
+        if header_name == actix_web::http::header::AUTHORIZATION {
+            authorization = header_value.to_str().unwrap_or("").to_string();
+        }
+    }
+
+    let token = env::var("VMX_TOKEN").unwrap();
+    authorization = authorization.replace("Bearer ", "").replace("bearer ", "");
+
+    if token != authorization {
+        if validate_token(&authorization).is_ok() {
+            forwarded_req = forwarded_req.insert_header((
+                actix_web::http::header::AUTHORIZATION,
+                format!("Bearer {}", token),
+            ));
+        } else {
+            return HttpResponse::Unauthorized().body("Invalid token");
         }
     }
 
@@ -248,6 +268,7 @@ async fn login_with_github(session: Session, state: web::Data<AppState>) -> impl
 async fn oauth_github_callback(
     query: web::Query<HashMap<String, String>>,
     session: Session,
+    kv: web::Data<Arc<Mutex<HashMap<String, String>>>>,
     state: web::Data<AppState>,
 ) -> impl Responder {
     tracing::info!("Callback received with query params: {:?}", query);
@@ -310,12 +331,14 @@ async fn oauth_github_callback(
                 &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
             )
             .unwrap();
-            session.insert("access_token", &access_token).unwrap();
+            let mut kv = kv.lock().await;
+            let id = cuid2::create_id();
+            kv.insert(id.clone(), access_token);
 
             let origin = format!(
-                "{}{}",
+                "{}?id={}",
                 env::var("ORIGIN").unwrap_or(String::from("http://localhost:8887")),
-                "/"
+                id
             );
 
             HttpResponse::Found()
@@ -328,9 +351,9 @@ async fn oauth_github_callback(
 
 #[actix_web::get("/oauth/callback")]
 async fn oauth_callback(
-    session: Session,
     oauth: web::Data<Arc<OauthClientType>>,
     query: web::Query<serde_json::Value>,
+    kv: web::Data<Arc<Mutex<HashMap<String, String>>>>,
 ) -> impl Responder {
     println!("query:\n {:?}", query);
     let secret = env::var("JWT_SECRET");
@@ -339,6 +362,7 @@ async fn oauth_callback(
         tracing::error!("JWT_SECRET environment variable is not set");
         return HttpResponse::InternalServerError().finish();
     }
+    let secret = secret.unwrap();
 
     let params = query.into_inner();
 
@@ -369,30 +393,68 @@ async fn oauth_callback(
     let info = info.unwrap();
     tracing::info!(did = ?info, "ATProto login successful for DID");
 
-    HttpResponse::Ok().json(json!({ "message": "Success" }))
+    let access_token = jsonwebtoken::encode(
+        &jsonwebtoken::Header::default(),
+        &Claims {
+            sub: info.0.replace("at://", ""),
+            exp: chrono::Utc::now().timestamp() + 3600 * 24 * 7,
+            iat: chrono::Utc::now().timestamp(),
+        },
+        &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
+    )
+    .unwrap();
+
+    let mut kv = kv.lock().await;
+    let id = cuid2::create_id();
+    kv.insert(id.clone(), access_token);
+
+    let origin = format!(
+        "{}?id={}",
+        env::var("ORIGIN").unwrap_or(String::from("http://localhost:8887")),
+        id
+    );
+
+    HttpResponse::Found()
+        .append_header(("Location", origin))
+        .finish()
 }
 
 #[actix_web::get("/accesstoken")]
-async fn get_access_token(session: Session) -> HttpResponse {
-    let access_token = session.get::<String>("access_token");
+async fn get_access_token(
+    query: web::Query<HashMap<String, String>>,
+    kv: web::Data<Arc<Mutex<HashMap<String, String>>>>,
+) -> HttpResponse {
+    let id = query["id"].clone();
 
-    if access_token.is_err() {
-        return HttpResponse::Unauthorized().finish();
+    if id.is_empty() {
+        tracing::info!("Empty id provided");
+        return HttpResponse::BadRequest().finish();
     }
 
-    let access_token = access_token.unwrap();
+    let kv_mutex = kv.lock().await;
+    let access_token = kv_mutex.get(&id);
 
     if access_token.is_none() {
+        tracing::info!("Access token not found for id: {}", id);
         return HttpResponse::Unauthorized().finish();
     }
 
     let access_token = access_token.unwrap();
+    let access_token = access_token.clone();
+
+    drop(kv_mutex);
+
+    let mut kv_mutex = kv.lock().await;
+    kv_mutex.remove(&id);
 
     HttpResponse::Ok().json(AccessToken { access_token })
 }
 
 pub async fn run_http_server() -> Result<(), anyhow::Error> {
     dotenv().ok();
+
+    let token = read_token_file()?;
+    env::set_var("VMX_TOKEN", token);
 
     let format = Format::default()
         .with_level(true)
@@ -456,13 +518,15 @@ pub async fn run_http_server() -> Result<(), anyhow::Error> {
             RedirectUrl::new("http://localhost:8887/oauth/github/callback".to_string()).unwrap(),
         );
     let app_state = AppState { oauth_client };
+    let kv = Arc::new(Mutex::new(HashMap::<String, String>::new()));
 
     tracing::info!("Starting VMX UI at {}", addr);
     tracing::info!("Proxying /api/* requests to {}", backend_url);
 
     HttpServer::new(move || {
-        let secret_key = Key::from("4a6c2521cdad2a2ebd99bf7a9a627234484abcf8dc5eecfa58ea7faefb0e8b327ec531defdb3286c8104aa11ec72489df5604e47e6763be9d03b2e63b7e6ef43".as_bytes());
-let cors = Cors::default()
+        let secret_key = env::var("SECRET_KEY").expect("SECRET_KEY must be set");
+        let secret_key = Key::from(secret_key.as_bytes());
+        let cors = Cors::default()
             .allow_any_origin()
             .allow_any_method()
             .allow_any_header()
@@ -483,6 +547,7 @@ let cors = Cors::default()
             .app_data(web::Data::new(oauth.clone()))
             .app_data(web::Data::new(arc_pool.clone()))
             .app_data(web::Data::new(app_state.clone()))
+            .app_data(web::Data::new(kv.clone()))
             .service(index)
             .service(sshkeys)
             .service(api)

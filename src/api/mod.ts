@@ -6,11 +6,14 @@ import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import { bearerAuth } from "hono/bearer-auth";
 import { parseFlags } from "@cliffy/flags";
+import { CONFIG_DIR } from "../constants.ts";
 
 export { images, machines, volumes };
 
 export default function () {
   const token = Deno.env.get("VMX_API_TOKEN") || crypto.randomUUID();
+  Deno.mkdirSync(CONFIG_DIR, { recursive: true });
+  Deno.writeTextFileSync(`${CONFIG_DIR}/token`, token);
   const { flags } = parseFlags(Deno.args);
 
   if (!Deno.env.get("VMX_API_TOKEN")) {

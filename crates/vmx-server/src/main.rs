@@ -1,5 +1,6 @@
 use vmx_server::run_http_server;
 
+pub mod auth;
 pub mod db;
 pub mod entity;
 pub mod repo;
